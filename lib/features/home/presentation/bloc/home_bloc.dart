@@ -1,0 +1,330 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/features/devices/domain/repositories/imou_stream_repository.dart';
+import 'package:mobile/features/home/domain/entities/camera_device.dart';
+import 'package:mobile/features/home/domain/usecases/delete_camera_device.dart';
+import 'package:mobile/features/home/domain/usecases/get_camera_devices.dart';
+import 'package:mobile/features/home/domain/usecases/get_weather.dart';
+import 'package:mobile/features/home/presentation/bloc/home_event.dart';
+import 'package:mobile/features/home/presentation/bloc/home_state.dart';
+import 'package:mobile/features/session/domain/failures/session_failure.dart';
+import 'package:mobile/features/session/domain/repositories/session_repository.dart';
+
+class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  HomeBloc({
+    required this.getWeather,
+    required this.getCameraDevices,
+    required this.deleteCameraDevice,
+    required this.sessionRepository,
+    required this.imouStreamRepository,
+  }) : super(const HomeInitial()) {
+    // Đăng ký các sự kiện (events) với các hàm xử lý tương ứng
+    on<HomeStarted>((event, emit) => _loadHome(emit));
+    on<HomeRetryRequested>(
+      (event, emit) => _loadHome(emit, silent: event.silent),
+    );
+    on<RoomFilterChanged>(_onRoomFilterChanged);
+    on<AddDeviceTapped>(_onAddDeviceTapped);
+    on<HomeDeviceDeleted>(_onDeviceDeleted);
+    on<HomeDevicePaired>(_onDevicePaired);
+    on<CameraThumbnailCaptured>(_onCameraThumbnailCaptured);
+    on<CameraStreamUrlRequested>(_onCameraStreamUrlRequested);
+    on<HomeAccessoryToggled>(_onAccessoryToggled);
+    on<NotificationTapped>((event, emit) {});
+  }
+
+  final GetWeather getWeather;
+  final GetCameraDevices getCameraDevices;
+  final DeleteCameraDevice deleteCameraDevice;
+  final ImouStreamRepository imouStreamRepository;
+  final SessionRepository sessionRepository;
+
+  List<CameraDevice> _activeDevices = [];
+  int _loadGeneration = 0;
+  Timer? _backendRetryTimer;
+
+  /// Tải dữ liệu chính cho trang chủ bao gồm thời tiết, danh sách camera, và kiểm tra session
+  Future<void> _loadHome(Emitter<HomeState> emit, {bool silent = false}) async {
+    final generation = ++_loadGeneration;
+    _backendRetryTimer?.cancel();
+    _backendRetryTimer = null;
+
+    if (!silent) {
+      emit(const HomeLoading());
+    }
+
+    final sessionReady = await _ensureSessionReady(emit);
+    if (!sessionReady || generation != _loadGeneration) {
+      return;
+    }
+
+    final weatherFuture = getWeather();
+    final deviceResult = await getCameraDevices();
+    var devicesLoaded = false;
+
+    deviceResult.fold(
+      (failure) {
+        if (_isBackendUnavailable(failure)) {
+          emit(const HomeBackendWarmingUp());
+          _scheduleBackendRetry();
+          return;
+        }
+        if (_isUnauthorized(failure)) {
+          emit(HomeUnauthorized(failure));
+          return;
+        }
+        emit(HomeError(failure));
+      },
+      (devices) {
+        devicesLoaded = true;
+        _activeDevices = List.of(devices);
+        emit(
+          HomeLoaded(
+            weather: null,
+            devices: List.unmodifiable(_activeDevices),
+            selectedRoom: 'All Rooms',
+          ),
+        );
+      },
+    );
+
+    if (!devicesLoaded || generation != _loadGeneration) return;
+
+    final weatherResult = await weatherFuture;
+    if (generation != _loadGeneration) return;
+
+    weatherResult.fold((_) {}, (weather) {
+      if (weather == null) return;
+      final currentState = state;
+      if (currentState is! HomeLoaded) return;
+      emit(currentState.copyWith(weather: weather));
+    });
+  }
+
+  /// Đảm bảo phiên đăng nhập với backend đã sẵn sàng
+  Future<bool> _ensureSessionReady(Emitter<HomeState> emit) async {
+    if (sessionRepository.currentSession != null) {
+      return true;
+    }
+
+    final sessionResult = await sessionRepository.provisionSession();
+    var sessionReady = false;
+
+    sessionResult.fold(
+      (failure) {
+        if (failure.kind == SessionFailureKind.backendUnavailable) {
+          emit(const HomeBackendWarmingUp());
+          _scheduleBackendRetry();
+          return;
+        }
+        if (failure.kind == SessionFailureKind.unauthorized ||
+            failure.kind == SessionFailureKind.forbidden) {
+          emit(HomeUnauthorized(failure.message));
+          return;
+        }
+        emit(HomeError(failure.message));
+      },
+      (_) {
+        sessionReady = true;
+      },
+    );
+    return sessionReady;
+  }
+
+  /// Lên lịch thử lại (retry) khi backend chưa sẵn sàng
+  void _scheduleBackendRetry() {
+    if (_backendRetryTimer?.isActive ?? false) {
+      return;
+    }
+    _backendRetryTimer = Timer(const Duration(seconds: 5), () {
+      add(const HomeRetryRequested(silent: true));
+    });
+  }
+
+  /// Kiểm tra xem lỗi có phải do máy chủ không phản hồi hay không
+  bool _isBackendUnavailable(String failure) {
+    final normalized = failure.toLowerCase();
+    return normalized.contains('máy chủ đang gặp lỗi') ||
+        normalized.contains('may chu dang gap loi') ||
+        normalized.contains('không thể kết nối') ||
+        normalized.contains('khong the ket noi') ||
+        normalized.contains('quá thời gian') ||
+        normalized.contains('qua thoi gian') ||
+        normalized.contains('network') ||
+        normalized.contains('timeout');
+  }
+
+  /// Kiểm tra xem lỗi có phải do chưa xác thực / hết phiên đăng nhập hay không
+  bool _isUnauthorized(String failure) {
+    final normalized = failure.toLowerCase();
+    return normalized.contains('phiên đăng nhập') ||
+        normalized.contains('phien dang nhap') ||
+        normalized.contains('chưa được thiết lập') ||
+        normalized.contains('chua duoc thiet lap') ||
+        normalized.contains('unauthorized') ||
+        normalized.contains('401') ||
+        normalized.contains('403');
+  }
+
+  /// Xử lý sự kiện khi người dùng thay đổi bộ lọc phòng
+  void _onRoomFilterChanged(RoomFilterChanged event, Emitter<HomeState> emit) {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+    emit(currentState.copyWith(selectedRoom: event.roomName));
+  }
+
+  /// Xử lý sự kiện khi bấm nút thêm thiết bị mới
+  void _onAddDeviceTapped(AddDeviceTapped event, Emitter<HomeState> emit) {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+
+    emit(currentState.copyWith(openPairingFlow: true));
+    emit(currentState.copyWith(openPairingFlow: false));
+  }
+
+  /// Xử lý xoá thiết bị camera
+  Future<void> _onDeviceDeleted(
+    HomeDeviceDeleted event,
+    Emitter<HomeState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+
+    final result = await deleteCameraDevice(event.deviceId);
+    var failed = false;
+    result.fold((failure) {
+      failed = true;
+      emit(HomeError(failure));
+    }, (_) {});
+    if (failed) return;
+
+    _activeDevices = _activeDevices
+        .where((device) => device.id != event.deviceId)
+        .toList();
+    final thumbnails = Map<String, Uint8List>.of(currentState.cameraThumbnails)
+      ..remove(event.deviceId);
+    emit(
+      currentState.copyWith(
+        devices: List.unmodifiable(_activeDevices),
+        cameraThumbnails: thumbnails,
+      ),
+    );
+  }
+
+  /// Cập nhật lại danh sách sau khi thiết bị mới được ghép nối
+  void _onDevicePaired(HomeDevicePaired event, Emitter<HomeState> emit) {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+
+    final deviceIndex = _activeDevices.indexWhere(
+      (device) => device.id == event.device.id,
+    );
+    if (deviceIndex == -1) {
+      _activeDevices = [..._activeDevices, event.device];
+    } else {
+      _activeDevices = List.of(_activeDevices);
+      _activeDevices[deviceIndex] = event.device;
+    }
+    emit(currentState.copyWith(devices: List.unmodifiable(_activeDevices)));
+  }
+
+  /// Xử lý sự kiện khi chụp và lưu trữ ảnh thumbnail của camera
+  void _onCameraThumbnailCaptured(
+    CameraThumbnailCaptured event,
+    Emitter<HomeState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+
+    emit(
+      currentState.copyWith(
+        cameraThumbnails: {
+          ...currentState.cameraThumbnails,
+          event.deviceId: event.bytes,
+        },
+      ),
+    );
+  }
+
+  /// Yêu cầu lấy URL luồng phát trực tiếp (live stream) từ dịch vụ Imou
+  Future<void> _onCameraStreamUrlRequested(
+    CameraStreamUrlRequested event,
+    Emitter<HomeState> emit,
+  ) async {
+    final serialNumber = event.serialNumber.trim();
+    if (serialNumber.isEmpty) {
+      emit(
+        CameraStreamUrlFailure(
+          cameraId: event.cameraId,
+          message: 'Không tìm thấy mã thiết bị để lấy luồng phát.',
+        ),
+      );
+      return;
+    }
+
+    emit(CameraStreamUrlLoading(event.cameraId));
+    final result = await imouStreamRepository.getStreamUrl(serialNumber);
+    result.fold(
+      (failure) {
+        emit(
+          CameraStreamUrlFailure(
+            cameraId: event.cameraId,
+            message: failure.message,
+          ),
+        );
+      },
+      (streamUrl) {
+        final trimmedUrl = streamUrl.trim();
+        if (trimmedUrl.isEmpty) {
+          emit(
+            CameraStreamUrlFailure(
+              cameraId: event.cameraId,
+              message: 'Imou Cloud chưa trả về đường dẫn phát trực tiếp.',
+            ),
+          );
+          return;
+        }
+        emit(
+          CameraStreamUrlLoaded(
+            cameraId: event.cameraId,
+            streamUrl: trimmedUrl,
+          ),
+        );
+      },
+    );
+  }
+
+  /// Chuyển đổi trạng thái bật/tắt (toggle) của các phụ kiện đi kèm camera
+  void _onAccessoryToggled(
+    HomeAccessoryToggled event,
+    Emitter<HomeState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is! HomeLoaded) return;
+    final deviceIndex = _activeDevices.indexWhere(
+      (device) => device.id == event.deviceId,
+    );
+    if (deviceIndex == -1) return;
+
+    final device = _activeDevices[deviceIndex];
+    if (event.accessoryIndex < 0 ||
+        event.accessoryIndex >= device.accessoryStates.length) {
+      return;
+    }
+
+    final states = List<bool>.of(device.accessoryStates);
+    states[event.accessoryIndex] = !states[event.accessoryIndex];
+    _activeDevices = List.of(_activeDevices);
+    _activeDevices[deviceIndex] = device.copyWith(accessoryStates: states);
+    emit(currentState.copyWith(devices: List.unmodifiable(_activeDevices)));
+  }
+
+  /// Hủy và dọn dẹp các tài nguyên (như timer) khi bloc đóng
+  @override
+  Future<void> close() {
+    _backendRetryTimer?.cancel();
+    return super.close();
+  }
+}
