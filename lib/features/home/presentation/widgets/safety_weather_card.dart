@@ -97,17 +97,15 @@ class _SafetyWeatherCardState extends State<SafetyWeatherCard>
 
   _SafetyWeatherDisplayData get _displayData {
     final hasCameras = widget.totalCameras > 0;
-    final weatherLabel = widget.weather != null
-        ? '${widget.weather!.temperature.toStringAsFixed(0)}°C · Hà Nội'
-        : 'Không có dữ liệu · Hà Nội';
 
+    // We don't need weatherLabel in _displayData anymore as it's handled in the UI
     if (!hasCameras) {
-      return _SafetyWeatherDisplayData(
+      return const _SafetyWeatherDisplayData(
         statusTitle: 'Chưa bắt đầu giám sát',
         statusMessage: 'Thêm camera để bảo vệ người thân tốt hơn.',
         cameraLabel: '0 thiết bị',
         alertLabel: 'Chưa có dữ liệu',
-        weatherLabel: weatherLabel,
+        weatherLabel: '',
         hasCameras: false,
       );
     } else {
@@ -116,7 +114,7 @@ class _SafetyWeatherCardState extends State<SafetyWeatherCard>
         statusMessage: 'Các camera đang theo dõi an toàn cho người thân.',
         cameraLabel: '${widget.onlineCameras}/${widget.totalCameras} camera',
         alertLabel: 'Sẵn sàng cảnh báo',
-        weatherLabel: weatherLabel,
+        weatherLabel: '',
         hasCameras: true,
       );
     }
@@ -192,24 +190,39 @@ class _SafetyWeatherCardState extends State<SafetyWeatherCard>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
+                          flex: 5,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'TRẠNG THÁI AN TOÀN',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                ),
+                              Row(
+                                children: [
+                                  _AnimatedSafetyIcon(
+                                    floatAnimation: _floatAnimation,
+                                    isProtected: display.hasCameras,
+                                    size: 32,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'TRẠNG THÁI AN TOÀN',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
                               Text(
                                 display.statusTitle,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   height: 1.2,
                                 ),
@@ -226,40 +239,57 @@ class _SafetyWeatherCardState extends State<SafetyWeatherCard>
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        _AnimatedSafetyIcon(
-                          floatAnimation: _floatAnimation,
-                          isProtected: display.hasCameras,
-                        ),
+                        if (widget.weather != null) ...[
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 4,
+                            child: _WeatherSummaryCapsule(
+                              weather: widget.weather!,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 24),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      child: Row(
-                        children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _SafetyMetricChip(
+                          icon: Iconsax.camera,
+                          label: display.cameraLabel,
+                          isActive: display.hasCameras,
+                        ),
+                        _SafetyMetricChip(
+                          icon: display.hasCameras
+                              ? Iconsax.shield_tick
+                              : Iconsax.shield_cross,
+                          label: display.alertLabel,
+                          isActive: display.hasCameras,
+                        ),
+                        if (widget.weather != null &&
+                            widget.weather!.humidity > 0)
                           _SafetyMetricChip(
-                            icon: Iconsax.camera,
-                            label: display.cameraLabel,
-                            isActive: display.hasCameras,
-                          ),
-                          const SizedBox(width: 8),
-                          _SafetyMetricChip(
-                            icon: display.hasCameras
-                                ? Iconsax.shield_tick
-                                : Iconsax.shield_cross,
-                            label: display.alertLabel,
-                            isActive: display.hasCameras,
-                          ),
-                          const SizedBox(width: 8),
-                          _SafetyMetricChip(
-                            icon: Iconsax.cloud_sunny,
-                            label: display.weatherLabel,
+                            icon: Iconsax.drop,
+                            label:
+                                '${widget.weather!.humidity.toStringAsFixed(0)}% độ ẩm',
                             isActive: true,
                           ),
-                        ],
-                      ),
+                        if (widget.weather != null &&
+                            widget.weather!.windSpeed > 0)
+                          _SafetyMetricChip(
+                            icon: Iconsax.wind,
+                            label:
+                                '${widget.weather!.windSpeed.toStringAsFixed(1)} m/s gió',
+                            isActive: true,
+                          ),
+                        if (widget.weather != null && widget.weather!.aqi > 0)
+                          _SafetyMetricChip(
+                            icon: Iconsax.health,
+                            label: '${widget.weather!.aqi} AQI',
+                            isActive: true,
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -276,29 +306,35 @@ class _AnimatedSafetyIcon extends StatelessWidget {
   const _AnimatedSafetyIcon({
     required this.floatAnimation,
     required this.isProtected,
+    this.size = 64,
   });
 
   final Animation<Offset> floatAnimation;
   final bool isProtected;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
+    final innerSize = size * 0.75;
+    final iconSize = size * 0.45;
+    final dotSize = size * 0.2;
+
     return SlideTransition(
       position: floatAnimation,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.15),
             ),
           ),
           Container(
-            width: 48,
-            height: 48,
+            width: innerSize,
+            height: innerSize,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
@@ -306,20 +342,23 @@ class _AnimatedSafetyIcon extends StatelessWidget {
             child: Icon(
               isProtected ? Icons.shield_rounded : Icons.gpp_maybe_rounded,
               color: isProtected ? AppColors.safe : AppColors.primary,
-              size: 28,
+              size: iconSize,
             ),
           ),
           if (isProtected)
             Positioned(
-              right: 2,
-              top: 2,
+              right: size * 0.03,
+              top: size * 0.03,
               child: Container(
-                width: 12,
-                height: 12,
+                width: dotSize,
+                height: dotSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.safe,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(
+                    color: Colors.white,
+                    width: dotSize * 0.15,
+                  ),
                 ),
               ),
             ),
@@ -361,15 +400,79 @@ class _SafetyMetricChip extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.7),
           ),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.8),
-              fontSize: 12,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isActive
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.8),
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeatherSummaryCapsule extends StatelessWidget {
+  const _WeatherSummaryCapsule({required this.weather});
+  final WeatherInfo weather;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.cloud_sunny, color: Colors.white, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${weather.temperature.toStringAsFixed(0)}°C',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            weather.city.isNotEmpty ? weather.city : 'Hà Nội',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            weather.condition,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 12,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

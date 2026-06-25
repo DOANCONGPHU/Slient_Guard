@@ -31,7 +31,7 @@ class CameraActionButtons extends StatelessWidget {
         children: [
           _ActionButton(
             icon: Icons.phone,
-            label: 'Gọi cho người\nthân',
+            label: 'Gọi khẩn cấp',
             onTap: () => EmergencyCallSheet.show(context),
           ),
           const _ActionButton(icon: Icons.textsms, label: 'Nhắn tin'),
