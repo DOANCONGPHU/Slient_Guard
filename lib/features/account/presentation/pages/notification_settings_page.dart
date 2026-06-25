@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mobile/core/theme/app_spacing.dart';
 import 'package:mobile/core/utils/app_colors.dart';
+import 'package:mobile/features/account/presentation/widgets/account_page_header.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -47,17 +47,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark
-        ? theme.colorScheme.surface
-        : AppColors.surface;
-
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context, theme, isDark),
+            const AccountPageHeader(title: 'Cài đặt thông báo'),
+            const SizedBox(height: 12),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.only(top: 8, bottom: AppSpacing.xxxl),
@@ -79,43 +75,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, ThemeData theme, bool isDark) {
-    final textColor = isDark ? theme.colorScheme.onSurface : AppColors.darkText;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: textColor,
-              size: 22,
-            ),
-            onPressed: () => context.pop(),
-            tooltip: 'Quay lại',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            splashRadius: 24,
-          ),
-          Expanded(
-            child: Text(
-              'Cài đặt thông báo',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
-            ),
-          ),
-          // Placeholder to balance the left back button
-          const SizedBox(width: 38),
-        ],
       ),
     );
   }
@@ -142,11 +101,9 @@ class _NotificationPreferenceTile extends StatelessWidget {
 
     return InkWell(
       onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.pagePadding,
-          vertical: 18,
-        ),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(
           children: [
             Expanded(
@@ -157,7 +114,6 @@ class _NotificationPreferenceTile extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: titleColor,
                   fontWeight: FontWeight.w600,
-                  fontSize: 16,
                 ),
               ),
             ),

@@ -107,6 +107,157 @@ class _WeeklyTrendChartCardState extends State<WeeklyTrendChartCard> {
     setState(() => _selectedWeekScope = scope);
   }
 
+  void _showWeekScopeSelector(
+    BuildContext context,
+    bool isDark,
+    ThemeData theme,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? theme.colorScheme.surface : AppColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? theme.colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.4,
+                              )
+                            : AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Chọn khoảng thời gian',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: isDark
+                            ? theme.colorScheme.onSurface
+                            : AppColors.darkText,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildScopeOption(
+                    context: context,
+                    title: 'Tuần này',
+                    subtitle: 'Dữ liệu từ thứ 2 đến hôm nay',
+                    theme: theme,
+                    isDark: isDark,
+                  ),
+                  _buildScopeOption(
+                    context: context,
+                    title: 'Tuần trước',
+                    subtitle: 'So sánh với tuần liền trước',
+                    theme: theme,
+                    isDark: isDark,
+                  ),
+                  _buildScopeOption(
+                    context: context,
+                    title: '7 ngày gần nhất',
+                    subtitle: 'Tính từ hôm nay lùi lại 7 ngày',
+                    theme: theme,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildScopeOption({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required ThemeData theme,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedWeekScope == title;
+
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).pop();
+        _onWeekScopeChanged(title);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                    ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                    : AppColors.primary.withValues(alpha: 0.1))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: isSelected
+                          ? (isDark
+                                ? theme.colorScheme.primary
+                                : AppColors.primary)
+                          : (isDark
+                                ? theme.colorScheme.onSurface
+                                : AppColors.darkText),
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isDark
+                          ? theme.colorScheme.onSurfaceVariant
+                          : AppColors.mutedText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle_rounded,
+                color: isDark ? theme.colorScheme.primary : AppColors.primary,
+                size: 24,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -120,19 +271,17 @@ class _WeeklyTrendChartCardState extends State<WeeklyTrendChartCard> {
       children: [
         ReportSectionHeader(
           title: 'Xu hướng 7 ngày',
-          actionWidget: PopupMenuButton<String>(
-            initialValue: _selectedWeekScope,
-            onSelected: _onWeekScopeChanged,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            position: PopupMenuPosition.under,
+          actionWidget: GestureDetector(
+            onTap: () => _showWeekScopeSelector(context, isDark, theme),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isDark
                     ? theme.colorScheme.surfaceContainerHighest
                     : AppColors.background,
+                border: Border.all(
+                  color: isDark ? theme.colorScheme.outline : AppColors.border,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -158,14 +307,6 @@ class _WeeklyTrendChartCardState extends State<WeeklyTrendChartCard> {
                 ],
               ),
             ),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'Tuần này', child: Text('Tuần này')),
-              PopupMenuItem(value: 'Tuần trước', child: Text('Tuần trước')),
-              PopupMenuItem(
-                value: '7 ngày gần nhất',
-                child: Text('7 ngày gần nhất'),
-              ),
-            ],
           ),
         ),
         const SizedBox(height: 16),
