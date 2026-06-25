@@ -276,7 +276,7 @@ class _CameraLivePreviewState extends State<CameraLivePreview> {
   }
 
   Future<void> _ensureNativeMediaKitRegistered() async {
-    if (!Platform.isAndroid || _nativeMediaKitRegistered) return;
+    if ((!Platform.isAndroid && !Platform.isIOS) || _nativeMediaKitRegistered) return;
     await _mediaKitChannel.invokeMethod<void>('registerMediaKit');
     _nativeMediaKitRegistered = true;
   }
