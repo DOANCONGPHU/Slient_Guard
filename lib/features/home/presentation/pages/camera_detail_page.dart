@@ -21,6 +21,7 @@ import 'package:mobile/features/home/presentation/widgets/camera_event_history_h
 import 'package:mobile/features/home/presentation/widgets/camera_event_tile.dart';
 import 'package:mobile/features/home/presentation/widgets/camera_latest_event_card.dart';
 import 'package:mobile/features/home/presentation/widgets/camera_safety_status.dart';
+import 'package:mobile/core/widgets/app_empty_state.dart';
 import 'package:mobile/features/home/presentation/widgets/camera_top_bar.dart';
 import 'package:mobile/features/home/presentation/widgets/camera_video_player.dart';
 import 'package:mobile/injection_container.dart';
@@ -446,11 +447,12 @@ class _HistoryEmptyBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Text(
-        message,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+      child: AppEmptyState(
+        icon: Icons.event_available_outlined,
+        title: 'Chưa có sự kiện',
+        message:
+            'Camera này chưa ghi nhận cảnh báo nào. Đây là một tín hiệu tốt.',
+        compact: true,
       ),
     );
   }
@@ -504,55 +506,13 @@ class _NoCameraEventsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.lightBlue,
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
-                ),
-                child: SizedBox.square(
-                  dimension: 42,
-                  child: Icon(
-                    Icons.event_available_outlined,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Chưa có sự kiện',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.darkText,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sự kiện mới từ camera sẽ xuất hiện tại đây.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.mutedText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: AppEmptyState(
+        icon: Icons.event_available_outlined,
+        title: 'Chưa có sự kiện',
+        message: 'Sự kiện mới từ camera sẽ xuất hiện tại đây.',
+        compact: true,
       ),
     );
   }

@@ -99,9 +99,10 @@ class _AccountPageState extends State<AccountPage> {
                       icon: Iconsax.microphone,
                       title: 'Trợ lý giọng nói',
                     ),
-                    const _AccountMenuTile(
+                    _AccountMenuTile(
                       icon: Iconsax.notification,
                       title: 'Thông báo',
+                      onTap: () => context.push('/notification-settings'),
                     ),
                     const _AccountMenuTile(
                       icon: Iconsax.shield_tick,
