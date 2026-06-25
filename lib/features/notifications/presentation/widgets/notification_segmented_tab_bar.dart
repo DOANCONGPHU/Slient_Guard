@@ -57,7 +57,7 @@ class NotificationSegmentedTabBar extends StatelessWidget
                 label: Text(unreadAlerts.toString()),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Text('General'),
+                  child: Text('Cảnh báo'),
                 ),
               ),
             ),
@@ -67,7 +67,7 @@ class NotificationSegmentedTabBar extends StatelessWidget
                 label: Text(unreadInvites.toString()),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Text('Smart Home'),
+                  child: Text('Hệ thống'),
                 ),
               ),
             ),

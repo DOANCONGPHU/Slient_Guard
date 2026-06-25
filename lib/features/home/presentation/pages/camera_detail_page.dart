@@ -157,10 +157,10 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
       ],
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
+        body: CustomScrollView(
+          slivers: [
+            SliverSafeArea(
+              sliver: SliverToBoxAdapter(
                 child: CameraTopBar(
                   device: widget.device,
                   onBack: () {
@@ -173,7 +173,10 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                   onSettings: _showCameraOptions,
                 ),
               ),
-              SliverToBoxAdapter(
+            ),
+            SliverToBoxAdapter(
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
                 child: BlocBuilder<HomeBloc, HomeState>(
                   buildWhen: (_, state) =>
                       state is CameraStreamUrlLoading ||
@@ -191,76 +194,69 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                   },
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-              SliverToBoxAdapter(
-                child: CameraSafetyStatus(
-                  device: widget.device,
-                  updateTime: TimeOfDay.now().format(context),
-                ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            SliverToBoxAdapter(
+              child: CameraSafetyStatus(
+                device: widget.device,
+                updateTime: TimeOfDay.now().format(context),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              // Latest event card / no-events panel — driven by history state
-              SliverToBoxAdapter(
-                child:
-                    BlocBuilder<
-                      CameraEventHistoryCubit,
-                      CameraEventHistoryState
-                    >(
-                      builder: (context, state) {
-                        final latestEvent = switch (state) {
-                          CameraEventHistoryLoaded(:final items)
-                              when items.isNotEmpty =>
-                            CameraEventAdapter.fromEventHistoryItem(
-                              items.first,
-                            ),
-                          _ => null,
-                        };
-                        if (latestEvent != null) {
-                          return CameraLatestEventCard(
-                            device: widget.device,
-                            latestEvent: latestEvent,
-                          );
-                        }
-                        return const _NoCameraEventsPanel();
-                      },
-                    ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            // Latest event card / no-events panel — driven by history state
+            SliverToBoxAdapter(
+              child:
+                  BlocBuilder<CameraEventHistoryCubit, CameraEventHistoryState>(
+                    builder: (context, state) {
+                      final latestEvent = switch (state) {
+                        CameraEventHistoryLoaded(:final items)
+                            when items.isNotEmpty =>
+                          CameraEventAdapter.fromEventHistoryItem(items.first),
+                        _ => null,
+                      };
+                      if (latestEvent != null) {
+                        return CameraLatestEventCard(
+                          device: widget.device,
+                          latestEvent: latestEvent,
+                        );
+                      }
+                      return const _NoCameraEventsPanel();
+                    },
+                  ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            SliverToBoxAdapter(
+              child: BlocBuilder<SuppressCubit, SuppressState>(
+                builder: (context, state) => _buildActionButtons(state),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              SliverToBoxAdapter(
-                child: BlocBuilder<SuppressCubit, SuppressState>(
-                  builder: (context, state) => _buildActionButtons(state),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              const SliverToBoxAdapter(child: CameraEventHistoryHeader()),
-              // Event history list — driven by CameraEventHistoryCubit
-              BlocBuilder<CameraEventHistoryCubit, CameraEventHistoryState>(
-                builder: (context, state) {
-                  return switch (state) {
-                    CameraEventHistoryInitial() ||
-                    CameraEventHistoryLoading() => _SliverEventSection(
-                      child: _HistoryLoadingBody(),
-                    ),
-                    CameraEventHistoryLoaded(:final items) => _SliverEventList(
-                      events: CameraEventAdapter.fromList(items),
-                    ),
-                    CameraEventHistoryEmpty() => _SliverEventSection(
-                      child: _HistoryEmptyBody(message: 'Chưa có sự kiện nào.'),
-                    ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            const SliverToBoxAdapter(child: CameraEventHistoryHeader()),
+            // Event history list — driven by CameraEventHistoryCubit
+            BlocBuilder<CameraEventHistoryCubit, CameraEventHistoryState>(
+              builder: (context, state) {
+                return switch (state) {
+                  CameraEventHistoryInitial() || CameraEventHistoryLoading() =>
+                    _SliverEventSection(child: _HistoryLoadingBody()),
+                  CameraEventHistoryLoaded(:final items) => _SliverEventList(
+                    events: CameraEventAdapter.fromList(items),
+                  ),
+                  CameraEventHistoryEmpty() => _SliverEventSection(
+                    child: _HistoryEmptyBody(message: 'Chưa có sự kiện nào.'),
+                  ),
 
-                    CameraEventHistoryError() => _SliverEventSection(
-                      child: _HistoryErrorBody(
-                        onRetry: () => context
-                            .read<CameraEventHistoryCubit>()
-                            .retry(widget.device),
-                      ),
+                  CameraEventHistoryError() => _SliverEventSection(
+                    child: _HistoryErrorBody(
+                      onRetry: () => context
+                          .read<CameraEventHistoryCubit>()
+                          .retry(widget.device),
                     ),
-                  };
-                },
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
-          ),
+                  ),
+                };
+              },
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
         ),
       ),
     );
