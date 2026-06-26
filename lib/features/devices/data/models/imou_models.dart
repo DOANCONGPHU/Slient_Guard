@@ -96,3 +96,12 @@ class ImouApiException implements Exception {
   @override
   String toString() => 'ImouApiException($code): $message';
 }
+
+class LiveStartCancelledException implements Exception {
+  const LiveStartCancelledException(this.deviceId);
+
+  final String deviceId;
+
+  @override
+  String toString() => 'LiveStartCancelledException($deviceId)';
+}

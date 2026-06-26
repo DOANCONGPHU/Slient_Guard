@@ -10,7 +10,24 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
   static const _defaultStreamId = 1;
 
   final ImouCloudDataSource _dataSource;
+  final Map<String, _StartLiveRequest> _pendingStarts = {};
   final Map<String, _ImouStreamSession> _activeSessions = {};
+  var _requestSequence = 0;
+
+  @visibleForTesting
+  bool hasActiveSession(String deviceSn) {
+    return _activeSessions.containsKey(deviceSn.trim());
+  }
+
+  @visibleForTesting
+  String? activeSessionLiveToken(String deviceSn) {
+    return _activeSessions[deviceSn.trim()]?.liveToken;
+  }
+
+  @visibleForTesting
+  String? activeSessionStreamUrl(String deviceSn) {
+    return _activeSessions[deviceSn.trim()]?.streamUrl;
+  }
 
   @override
   Future<String> getStreamUrl(String deviceSn) {
@@ -25,29 +42,50 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
     if (normalizedSn.isEmpty) {
       throw const ImouApiException(
         'INVALID_DEVICE_SN',
-        'Không tìm thấy mã serial của camera.',
+        'Khong tim thay ma serial cua camera.',
       );
     }
 
+    final request = _StartLiveRequest(_newSessionId(normalizedSn));
+    _pendingStarts[normalizedSn] = request;
+    debugPrint(
+      '[ImouStreamRepository] startLive requestId=${request.id} '
+      'deviceId=${_maskDeviceId(normalizedSn)}',
+    );
+
+    String? accessTokenValue;
+    String? bindLiveToken;
+    String? selectedStreamLiveToken;
+    String? selectedLiveToken;
+    var cleanupHandled = false;
+
     try {
       final accessToken = await _dataSource.getAccessToken();
-      final isOnline = await _dataSource.isDeviceOnline(
-        accessToken: accessToken.token,
-        deviceSn: normalizedSn,
-      );
-      if (!isOnline) {
-        throw const ImouApiException(
-          'DEVICE_OFFLINE',
-          'Camera is offline or disconnected',
-        );
-      }
+      accessTokenValue = accessToken.token;
+      _throwIfCancelledOrStale(normalizedSn, request);
 
-      final bindLiveToken = await _dataSource.bindDeviceLive(
+      bindLiveToken = await _dataSource.bindDeviceLive(
         accessToken: accessToken.token,
         deviceSn: normalizedSn,
         channelId: _defaultChannelId,
         streamId: _defaultStreamId,
       );
+      if (_isCancelledOrStale(normalizedSn, request)) {
+        debugPrint(
+          '[ImouStreamRepository] bindDeviceLive returned after cancellation '
+          'requestId=${request.id} deviceId=${_maskDeviceId(normalizedSn)}',
+        );
+        cleanupHandled = true;
+        await _cleanupLiveTokens(
+          accessToken: accessToken.token,
+          deviceId: normalizedSn,
+          requestId: request.id,
+          liveTokens: [bindLiveToken],
+          reason: 'cancelled after bindDeviceLive',
+        );
+        throw LiveStartCancelledException(normalizedSn);
+      }
+
       final streamInfo = await _dataSource.getLiveStreamInfo(
         accessToken: accessToken.token,
         deviceSn: normalizedSn,
@@ -55,6 +93,7 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
       );
 
       final selectedStream = streamInfo.selectedStream;
+      selectedStreamLiveToken = selectedStream?.liveToken?.trim();
       final streamUrl = selectedStream?.playbackUrl?.trim();
       if (streamUrl == null || streamUrl.isEmpty) {
         throw const ImouApiException(
@@ -63,39 +102,81 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
         );
       }
 
-      final liveToken = selectedStream?.liveToken?.trim().isNotEmpty == true
-          ? selectedStream!.liveToken!.trim()
+      final streamToken = selectedStreamLiveToken;
+      selectedLiveToken = streamToken != null && streamToken.isNotEmpty
+          ? streamToken
           : bindLiveToken?.trim();
-      if (liveToken == null || liveToken.isEmpty) {
+      if (selectedLiveToken == null || selectedLiveToken.isEmpty) {
         throw const ImouApiException(
           'NO_LIVE_TOKEN',
           'Imou Cloud did not return a live token.',
         );
       }
 
+      if (_isCancelledOrStale(normalizedSn, request)) {
+        cleanupHandled = true;
+        await _cleanupLiveTokens(
+          accessToken: accessToken.token,
+          deviceId: normalizedSn,
+          requestId: request.id,
+          liveTokens: [
+            bindLiveToken,
+            selectedStreamLiveToken,
+            selectedLiveToken,
+          ],
+          reason: 'cancelled after getLiveStreamInfo',
+        );
+        throw LiveStartCancelledException(normalizedSn);
+      }
+
       final session = _ImouStreamSession(
-        sessionId: _newSessionId(normalizedSn),
+        sessionId: request.id,
         deviceId: normalizedSn,
         channelId: _defaultChannelId,
         streamId: selectedStream?.streamId ?? _defaultStreamId,
         streamUrl: streamUrl,
-        liveToken: liveToken,
+        liveToken: selectedLiveToken,
         createdAt: DateTime.now(),
       );
       _activeSessions[normalizedSn] = session;
+      _removePendingIfCurrent(normalizedSn, request);
       debugPrint(
-        '[ImouStreamRepository] session created deviceId=${_maskDeviceId(normalizedSn)} '
-        'sessionId=${session.sessionId} streamId=${session.streamId} '
-        'protocol=${Uri.tryParse(streamUrl)?.scheme ?? 'unknown'} '
-        'liveToken=${_maskToken(liveToken)}',
+        '[ImouStreamRepository] active session saved '
+        'deviceId=${_maskDeviceId(normalizedSn)} sessionId=${session.sessionId} '
+        'streamId=${session.streamId} protocol=${Uri.tryParse(streamUrl)?.scheme ?? 'unknown'} '
+        'liveToken=${_maskToken(selectedLiveToken)}',
       );
       return streamUrl;
     } on ImouApiException catch (error) {
-      if (!retriedAfterTokenRefresh && _isTokenExpired(error)) {
+      final shouldRetryToken =
+          !retriedAfterTokenRefresh &&
+          !_isCancelledOrStale(normalizedSn, request) &&
+          _isTokenExpired(error);
+      await _cleanupFailedStart(
+        deviceId: normalizedSn,
+        request: request,
+        accessToken: accessTokenValue,
+        liveTokens: [bindLiveToken, selectedStreamLiveToken, selectedLiveToken],
+        cleanupHandled: cleanupHandled,
+        reason: 'startLive failed before active session was saved',
+      );
+      _removePendingIfCurrent(normalizedSn, request);
+      if (shouldRetryToken) {
         debugPrint('[ImouStreamRepository] token expired, refreshing once');
         _dataSource.clearAccessToken();
         return _getStreamUrl(normalizedSn, retriedAfterTokenRefresh: true);
       }
+      rethrow;
+    } catch (error) {
+      await _cleanupFailedStart(
+        deviceId: normalizedSn,
+        request: request,
+        accessToken: accessTokenValue,
+        liveTokens: [bindLiveToken, selectedStreamLiveToken, selectedLiveToken],
+        cleanupHandled: cleanupHandled,
+        reason: 'startLive failed before active session was saved',
+      );
+      _removePendingIfCurrent(normalizedSn, request);
       rethrow;
     }
   }
@@ -103,30 +184,108 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
   @override
   Future<void> releaseStreamSession(String deviceSn) async {
     final normalizedSn = deviceSn.trim();
-    final session = _activeSessions[normalizedSn];
-    if (session == null || session.liveToken.trim().isEmpty) return;
+    if (normalizedSn.isEmpty) return;
 
-    if (_activeSessions[normalizedSn]?.sessionId != session.sessionId) {
+    final pending = _pendingStarts[normalizedSn];
+    if (pending != null) {
+      pending.isCancelled = true;
       debugPrint(
-        '[ImouStreamRepository] skip stale unbind deviceId=${_maskDeviceId(normalizedSn)}',
+        '[ImouStreamRepository] startLive cancelled while pending '
+        'deviceId=${_maskDeviceId(normalizedSn)} requestId=${pending.id}',
       );
-      return;
     }
-    _activeSessions.remove(normalizedSn);
+
+    final session = _activeSessions.remove(normalizedSn);
+    debugPrint(
+      '[ImouStreamRepository] stopLive called '
+      'deviceId=${_maskDeviceId(normalizedSn)} active=${session != null} '
+      'pending=${pending != null}',
+    );
+    if (session == null) return;
 
     try {
       final accessToken = await _dataSource.getAccessToken();
-      debugPrint(
-        '[ImouStreamRepository] unbind reason=screen_closed '
-        'deviceId=${_maskDeviceId(session.deviceId)} sessionId=${session.sessionId} '
-        'liveToken=${_maskToken(session.liveToken)}',
-      );
-      await _dataSource.unbindLive(
+      await _cleanupLiveTokens(
         accessToken: accessToken.token,
-        liveToken: session.liveToken,
+        deviceId: normalizedSn,
+        requestId: session.sessionId,
+        liveTokens: [session.liveToken],
+        reason: 'screen_closed',
       );
     } on Object catch (error) {
       debugPrint('[ImouStreamRepository] unbind failed: $error');
+    }
+  }
+
+  Future<void> _cleanupFailedStart({
+    required String deviceId,
+    required _StartLiveRequest request,
+    required String? accessToken,
+    required List<String?> liveTokens,
+    required bool cleanupHandled,
+    required String reason,
+  }) async {
+    if (cleanupHandled || accessToken == null) return;
+    final ownsActiveSession =
+        _activeSessions[deviceId]?.sessionId == request.id;
+    if (ownsActiveSession) return;
+
+    await _cleanupLiveTokens(
+      accessToken: accessToken,
+      deviceId: deviceId,
+      requestId: request.id,
+      liveTokens: liveTokens,
+      reason: reason,
+    );
+  }
+
+  Future<void> _cleanupLiveTokens({
+    required String accessToken,
+    required String deviceId,
+    required String requestId,
+    required Iterable<String?> liveTokens,
+    required String reason,
+  }) async {
+    final uniqueTokens = <String>{};
+    for (final token in liveTokens) {
+      final value = token?.trim();
+      if (value != null && value.isNotEmpty) uniqueTokens.add(value);
+    }
+
+    for (final liveToken in uniqueTokens) {
+      try {
+        debugPrint(
+          '[ImouStreamRepository] cleanup unbind reason=$reason '
+          'deviceId=${_maskDeviceId(deviceId)} requestId=$requestId '
+          'liveToken=${_maskToken(liveToken)}',
+        );
+        await _dataSource.unbindLive(
+          accessToken: accessToken,
+          liveToken: liveToken,
+        );
+      } on Object catch (error) {
+        debugPrint(
+          '[ImouStreamRepository] cleanup unbind failed reason=$reason '
+          'deviceId=${_maskDeviceId(deviceId)} requestId=$requestId '
+          'liveToken=${_maskToken(liveToken)} error=$error',
+        );
+      }
+    }
+  }
+
+  void _throwIfCancelledOrStale(String deviceId, _StartLiveRequest request) {
+    if (!_isCancelledOrStale(deviceId, request)) return;
+    throw LiveStartCancelledException(deviceId);
+  }
+
+  bool _isCancelledOrStale(String deviceId, _StartLiveRequest request) {
+    final current = _pendingStarts[deviceId];
+    return request.isCancelled || current == null || current.id != request.id;
+  }
+
+  void _removePendingIfCurrent(String deviceId, _StartLiveRequest request) {
+    if (_pendingStarts[deviceId]?.id == request.id) {
+      _pendingStarts.remove(deviceId);
     }
   }
 
@@ -139,7 +298,8 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
   }
 
   String _newSessionId(String deviceId) {
-    return '${deviceId.hashCode.abs()}-${DateTime.now().microsecondsSinceEpoch}';
+    final sequence = ++_requestSequence;
+    return '${deviceId.hashCode.abs()}-$sequence-${DateTime.now().microsecondsSinceEpoch}';
   }
 
   String _maskDeviceId(String deviceId) {
@@ -153,6 +313,13 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
     if (value.length <= 8) return '***';
     return '${value.substring(0, 4)}***${value.substring(value.length - 4)}';
   }
+}
+
+class _StartLiveRequest {
+  _StartLiveRequest(this.id);
+
+  final String id;
+  bool isCancelled = false;
 }
 
 class _ImouStreamSession {
