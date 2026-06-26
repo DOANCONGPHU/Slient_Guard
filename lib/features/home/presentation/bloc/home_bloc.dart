@@ -338,9 +338,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) {
     debugPrint('[HomeBloc] playback failed: ${event.error}');
     emit(
-      CameraStreamUrlFailure(
+      CameraPlaybackFailure(
         cameraId: event.cameraId,
-        message: 'Mất kết nối với camera. Vui lòng thử lại.',
+        message: 'Không phát được livestream sau nhiều lần thử.',
+        error: event.error,
       ),
     );
   }
@@ -356,7 +357,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   bool _isPlayableCloudUrl(String url) {
     final uri = Uri.tryParse(url);
-    if (uri == null || uri.host.isEmpty || uri.port == 8890) return false;
+    if (uri == null || uri.host.isEmpty) return false;
     final scheme = uri.scheme.toLowerCase();
     if (scheme != 'http' && scheme != 'https') return false;
 

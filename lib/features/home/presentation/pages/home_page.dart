@@ -241,7 +241,8 @@ class _HomeTab extends StatelessWidget {
           CameraStreamUrlInitial() ||
           CameraStreamUrlLoading() ||
           CameraStreamUrlLoaded() ||
-          CameraStreamUrlFailure() => const WaveTextLoader(),
+          CameraStreamUrlFailure() ||
+          CameraPlaybackFailure() => const WaveTextLoader(),
           HomeLoaded() => _LoadedHome(state: state),
         };
       },
