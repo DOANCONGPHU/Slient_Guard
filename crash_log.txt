@@ -1,0 +1,21 @@
+--------- beginning of main
+06-26 18:52:46.537 15551 16260 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+06-26 18:52:46.763 15551 16260 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+06-26 18:52:46.855 15551 16292 I flutter : The Dart VM service is listening on http://127.0.0.1:37831/cG_rgIFk1PI=/
+06-26 18:52:48.995 15551 15551 I flutter : [STARTUP] FlutterNativeSplash.preserve: 8ms
+06-26 18:52:53.626 15551 15551 I flutter : [Startup] First frame rendered in 4625ms
+06-26 18:52:58.532 15551 15551 I flutter : [STARTUP] Firebase.initializeApp: 4893ms
+06-26 18:52:58.586 15551 15551 I flutter : [STARTUP] AppInitializer.configureCrashReporting: 9ms
+06-26 18:52:58.704 15551 15551 I flutter : [STARTUP] di.init.corePlatformSingletonRegistrations: 54ms
+06-26 18:52:58.728 15551 15551 I flutter : [STARTUP] di.init.authNotificationBlocRegistrations: 23ms
+06-26 18:52:58.754 15551 15551 I flutter : [STARTUP] di.init.deviceHomeRegistrations: 25ms
+06-26 18:52:58.784 15551 15551 I flutter : [STARTUP] di.init.reviewReportRegistrations: 28ms
+06-26 18:52:58.785 15551 15551 I flutter : [STARTUP] di.init.total: 153ms
+06-26 18:52:58.785 15551 15551 I flutter : [STARTUP] AppInitializer.di.init: 188ms
+06-26 18:52:59.022 15551 16750 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+06-26 18:52:59.064 15551 16750 I flutter : [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+06-26 18:53:00.374 15551 15551 I flutter : [STARTUP] ThemeController.load: 41ms
+06-26 18:53:00.944 15551 15551 I flutter : [STARTUP] MonitoringSuppressService.pruneExpired: 12ms
+06-26 18:53:01.370 15551 15551 I flutter : [STARTUP] AppInitializer.takeInitialFcmAlert: 146ms
+06-26 18:53:01.789 15551 15551 I flutter : [STARTUP] AppInitializer.initializeLocalNotifications: 417ms
+06-26 18:53:01.796 15551 15551 I flutter : [STARTUP] AppInitializer.loadPendingInvites: 5ms

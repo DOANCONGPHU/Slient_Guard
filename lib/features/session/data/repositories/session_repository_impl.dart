@@ -53,9 +53,9 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
-  Future<Either<SessionFailure, void>> logout() async {
+  Future<Either<SessionFailure, void>> logout({String? idToken}) async {
     try {
-      await _remoteDataSource.logout();
+      await _remoteDataSource.logout(idToken: idToken);
       return const Right(null);
     } on ApiException catch (error, stackTrace) {
       _logFailure(error, stackTrace);
@@ -82,6 +82,26 @@ class SessionRepositoryImpl implements SessionRepository {
       );
     } finally {
       clearCachedSession();
+    }
+  }
+
+  @override
+  Future<Either<SessionFailure, void>> switchHousehold(
+    String householdId,
+  ) async {
+    try {
+      await _remoteDataSource.switchHousehold(householdId);
+      clearCachedSession();
+      await provisionSession();
+      return const Right(null);
+    } on ApiException catch (error, stackTrace) {
+      _logFailure(error, stackTrace);
+      return Left(_mapApiException(error));
+    } catch (error, stackTrace) {
+      _logFailure(error, stackTrace);
+      return const Left(
+        SessionFailure('Không thể chuyển hộ gia đình. Vui lòng thử lại.'),
+      );
     }
   }
 

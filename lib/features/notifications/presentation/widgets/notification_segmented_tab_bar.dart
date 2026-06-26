@@ -20,18 +20,18 @@ class NotificationSegmentedTabBar extends StatelessWidget
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.pagePadding,
-        4,
+        0,
         AppSpacing.pagePadding,
-        12,
+        8,
       ),
       child: Container(
-        height: 48,
+        height: 44,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
               ? Theme.of(context).colorScheme.surfaceContainerHighest
-              : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(16),
+              : AppColors.mutedText.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: TabBar(
           controller: controller,
@@ -39,9 +39,9 @@ class NotificationSegmentedTabBar extends StatelessWidget
           indicatorSize: TabBarIndicatorSize.tab,
           indicator: BoxDecoration(
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
           ),
-          labelColor: AppColors.surface,
+          labelColor: Colors.white,
           labelStyle: Theme.of(
             context,
           ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -49,7 +49,7 @@ class NotificationSegmentedTabBar extends StatelessWidget
           unselectedLabelStyle: Theme.of(
             context,
           ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          splashBorderRadius: BorderRadius.circular(12),
+          splashBorderRadius: BorderRadius.circular(8),
           tabs: [
             Tab(
               child: Badge(
@@ -78,5 +78,5 @@ class NotificationSegmentedTabBar extends StatelessWidget
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(52);
 }

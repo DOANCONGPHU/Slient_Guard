@@ -1,0 +1,106 @@
+Launching lib\main.dart on CPH2471 in debug mode...
+Running Gradle task 'assembleDebug'...                          
+WARNING: Your Android app project: app located at: D:\AI_TC\C2-App-128\mobile\android\app\build.gradle.kts
+applies the Kotlin Gradle Plugin, which will cause build failures in future versions of Flutter. 
+Please migrate your app to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers
+
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): google_sign_in_android, image_picker_android, mobile_scanner, package_info_plus, shared_preferences_android, url_launcher_android, volume_controller, wakelock_plus
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing 
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Running Gradle task 'assembleDebug'...                             17.5s
+√ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...          98.3s
+I/FlutterActivityAndFragmentDelegate( 7545): If you are attempting to set --enable-dart-profiling via Intent extras to launch a Flutter component outside of using the Flutter CLI, note that support for setting engine flags on Android via Intent will soon be dropped; see https://github.com/flutter/flutter/issues/180686 for more information on this breaking change. To migrate, set --enable-dart-profiling or any other flags specified via Intent extras on the command line instead or see https://github.com/flutter/flutter/blob/main/docs/engine/Flutter-Android-Engine-Flags.md for alternative methods.
+D/FlutterJNI( 7545): Beginning load of flutter...
+D/FlutterJNI( 7545): flutter (null) was loaded normally!
+I/flutter ( 7545): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+I/flutter ( 7545): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+D/FlutterRenderer( 7545): Width is zero. 0,0
+Syncing files to device CPH2471...                              
+I/flutter ( 7545): [STARTUP] FlutterNativeSplash.preserve: 8ms
+Syncing files to device CPH2471...                                 261ms
+
+Flutter run key commands.
+r Hot reload. 
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on CPH2471 is available at: http://127.0.0.1:60354/aLxKSZhMmzs=/
+The Flutter DevTools debugger and profiler on CPH2471 is available at: http://127.0.0.1:60354/aLxKSZhMmzs=/devtools/?uri=ws://127.0.0.1:60354/aLxKSZhMmzs=/ws
+I/.example.mobil( 7545): Thread[2,tid=7561,WaitingInMainSignalCatcherLoop,Thread*=0xb400007651a26000,peer=0x2f43fb0,"Signal Catcher"]: reacting to signal 3
+I/.example.mobil( 7545): 
+I/.example.mobil( 7545): Wrote stack traces to tombstoned
+I/flutter ( 7545): [Startup] First frame rendered in 4412ms
+E/Parcel  ( 7545): Reading a NULL string not supported here.
+I/Choreographer( 7545): Skipped 723 frames!  The application may be doing too much work on its main thread.
+I/Quality ( 7545): Skipped: false 723 cost 12066.586 refreshRate 16666667 processName com.example.mobile
+E/ActivityThread( 7545): asyncReportFrames skippedFrames= 723 true
+D/nativeloader( 7545): Load libSchedAssistJni.so using system ns (caller=/system/framework/oplus-framework.jar): ok
+D/ExtensionsLoader( 7545): createInstance(64bit) : createExtendedFactory
+D/ExtensionsLoader( 7545): Opened libSchedAssistExtImpl.so
+E/Parcel  ( 7545): Reading a NULL string not supported here.
+D/FlutterRenderer( 7545): Width is zero. 0,0
+I/BufferQueueConsumer( 7545): [](id:1d7900000000,api:0,p:-1,c:7545) connect: controlledByApp=false
+I/BLASTBufferQueue( 7545): [ViewRootImpl[MainActivity]#0] constructor()
+D/ExtensionsLoader( 7545): createInstance(64bit) : createExtendedFactory
+D/ExtensionsLoader( 7545): Opened libSchedAssistExtImpl.so
+I/.example.mobil( 7545): Compiler allocated 4425KB to compile void android.view.ViewRootImpl.performTraversals()
+V/ZoomWindowDecorView( 7545): setLastReportedMergedConfiguration mZoomDisplayHeight: 1612 getDecorView.254614141
+D/FlutterJNI( 7545): Sending viewport metrics to the engine.
+D/libMEOW ( 7545): meow new tls: 0xb4000075b6d22ac0
+D/libMEOW ( 7545): applied 1 plugins for [com.example.mobile]:
+D/libMEOW ( 7545):   plugin 1: [libMEOW_gift.so]: 0xb40000763fc2e580
+D/libMEOW ( 7545): rebuild call chain: 0xb4000075949c2ac0
+E/OpenGLRenderer( 7545): EglManager::makeCurrent mED = 0x1, surface = 0x0, mEC = 0xb4000075b6b29480, error = EGL_SUCCESS
+I/BufferQueueProducer( 7545): [ViewRootImpl[MainActivity]#0(BLAST Consumer)0](id:1d7900000000,api:1,p:7545,c:7545) connect: api=1 producerControlledByApp=true
+I/Quality ( 7545): ActivityThread: setSurface delay 50 com.example.mobile 7545
+I/BufferQueueConsumer( 7545): [](id:1d7900000001,api:0,p:-1,c:7545) connect: controlledByApp=false
+I/BLASTBufferQueue( 7545): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1] constructor()
+I/BufferQueueProducer( 7545): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:1d7900000001,api:1,p:7545,c:7545) connect: api=1 producerControlledByApp=true
+E/ion     ( 7545): ioctl c0044901 failed with code -1: Invalid argument
+I/Quality ( 7545): stackInfo :----- pid 7545 at 2026-06-26 18:44:46.106 -----;Cmd line: com.example.mobile;"main" prio=5 tid=2 RUNNABLE sysTid=7545;  at io.flutter.embedding.engine.FlutterJNI.nativeSurfaceCreated(Native Method);  at io.flutter.embedding.engine.FlutterJNI.onSurfaceCreated(FlutterJNI.java:619);  at io.flutter.embedding.engine.renderer.FlutterRenderer.startRenderingToSurface(FlutterRenderer.java:1159);  at io.flutter.embedding.android.FlutterSurfaceView.connectSurfaceToRenderer(FlutterSurfaceView.java:268);  at io.flutter.embedding.android.FlutterSurfaceView.access$200(FlutterSurfaceView.java:35);  at io.flutter.embedding.android.FlutterSurfaceView$1.surfaceCreated(FlutterSurfaceView.java:62);  at io.flutter.embedding.android.SurfaceHolderCallbackCompat.surfaceCreated(SurfaceHolderCallbackCompat.java:112);  at android.view.SurfaceView.updateSurface(SurfaceView.java:1260);  at android.view.SurfaceView.lambda$new$0$SurfaceView(SurfaceView.java:204);  at android.view.SurfaceView$$ExternalSyntheticLambda2.onPreDraw(Unknown Source:2);  at android.view.ViewTreeObserver.dispatchOnPreDraw(ViewTreeObserver.java:1093);  at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:3698);  at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:2421);  at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:9502);  at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1242);  at android.view.Choreographer.doCallbacks(Choreographer.java:996);  at android.view.ChoreographerExtImpl.checkScrollOptSceneEnable(ChoreographerExtImpl.java:389);  at android.view.Choreographer.doFrame(Choreographer.java:865);  at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1227);  at android.os.Handler.handleCallback(Handler.java:938);  at android.os.Handler.dispatchMessage(Handler.java:99);  at android.os.Looper.loopOnce(Looper.java:233);  at android.os.Looper.loop(Looper.java:344);  at android.app.ActivityThread.main(ActivityThread.java:8249);  at java.lang.reflect.Method.invoke(Native Method);  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:589);  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1071);
+I/Quality ( 7545): stackInfo :----- pid 7545 at 2026-06-26 18:44:47.623 -----;Cmd line: com.example.mobile;"main" prio=5 tid=2 RUNNABLE sysTid=7545;  at io.flutter.embedding.engine.FlutterJNI.nativeSurfaceCreated(Native Method);  at io.flutter.embedding.engine.FlutterJNI.onSurfaceCreated(FlutterJNI.java:619);  at io.flutter.embedding.engine.renderer.FlutterRenderer.startRenderingToSurface(FlutterRenderer.java:1159);  at io.flutter.embedding.android.FlutterSurfaceView.connectSurfaceToRenderer(FlutterSurfaceView.java:268);  at io.flutter.embedding.android.FlutterSurfaceView.access$200(FlutterSurfaceView.java:35);  at io.flutter.embedding.android.FlutterSurfaceView$1.surfaceCreated(FlutterSurfaceView.java:62);  at io.flutter.embedding.android.SurfaceHolderCallbackCompat.surfaceCreated(SurfaceHolderCallbackCompat.java:112);  at android.view.SurfaceView.updateSurface(SurfaceView.java:1260);  at android.view.SurfaceView.lambda$new$0$SurfaceView(SurfaceView.java:204);  at android.view.SurfaceView$$ExternalSyntheticLambda2.onPreDraw(Unknown Source:2);  at android.view.ViewTreeObserver.dispatchOnPreDraw(ViewTreeObserver.java:1093);  at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:3698);  at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:2421);  at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:9502);  at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1242);  at android.view.Choreographer.doCallbacks(Choreographer.java:996);  at android.view.ChoreographerExtImpl.checkScrollOptSceneEnable(ChoreographerExtImpl.java:389);  at android.view.Choreographer.doFrame(Choreographer.java:865);  at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1227);  at android.os.Handler.handleCallback(Handler.java:938);  at android.os.Handler.dispatchMessage(Handler.java:99);  at android.os.Looper.loopOnce(Looper.java:233);  at android.os.Looper.loop(Looper.java:344);  at android.app.ActivityThread.main(ActivityThread.java:8249);  at java.lang.reflect.Method.invoke(Native Method);  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:589);  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1071);
+I/BufferQueueProducer( 7545): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:1d7900000001,api:1,p:7545,c:7545) disconnect: api 1
+E/BLASTBufferQueue( 7545): BLASTBufferItemConsumer::onDisconnect()
+I/BufferQueueProducer( 7545): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:1d7900000001,api:1,p:7545,c:7545) connect: api=1 producerControlledByApp=true
+E/ANR_LOG ( 7545): >>> msg's executing time is too long
+E/ANR_LOG ( 7545): Blocked msg = { when=-15s824ms what=0 target=android.view.Choreographer$FrameHandler callback=android.view.Choreographer$FrameDisplayEventReceiver } , cost  = 3757 ms
+E/ANR_LOG ( 7545): >>>Current msg List is:
+E/ANR_LOG ( 7545): Current msg <1> = { when=-14s128ms what=0 target=m7.je callback=m7.zf }
+E/ANR_LOG ( 7545): Current msg <2> = { when=-13s812ms what=131 target=android.app.ActivityThread$H obj=android.app.ActivityThread$ProviderRefCount@ba395a5 }
+E/ANR_LOG ( 7545): Current msg <3> = { when=-13s417ms what=0 target=m7.je callback=m7.zf }
+E/ANR_LOG ( 7545): Current msg <4> = { when=-12s909ms what=0 target=android.app.ActivityThread$H callback=android.app.LoadedApk$ServiceDispatcher$RunConnection }
+E/ANR_LOG ( 7545): Current msg <5> = { when=-9s139ms what=0 target=android.view.ViewRootImpl$ViewRootHandler callback=android.view.ViewRootImpl$4 }
+E/ANR_LOG ( 7545): Current msg <6> = { when=-8s738ms what=0 target=android.os.Handler callback=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 }
+E/ANR_LOG ( 7545): Current msg <7> = { when=-8s610ms what=0 target=android.os.Handler callback=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 }
+E/ANR_LOG ( 7545): Current msg <8> = { when=-6s104ms what=0 target=android.os.Handler callback=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 }
+E/ANR_LOG ( 7545): Current msg <9> = { when=-5s687ms what=0 target=android.os.Handler callback=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 }
+E/ANR_LOG ( 7545): Current msg <10> = { when=-5s319ms what=0 target=android.os.Handler callback=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 }
+E/ANR_LOG ( 7545): >>>CURRENT MSG DUMP OVER<<<
+I/Quality ( 7545): ActivityThread: doFrame delay 3759 com.example.mobile 7545
+I/Quality ( 7545): Blocked msg = Package name: com.example.mobile [ schedGroup: 5 schedPolicy: 0 ] process the message: { when=-15s826ms what=0 target=android.view.Choreographer$FrameHandler callback=android.view.Choreographer$FrameDisplayEventReceiver } took 3759 ms
+I/Choreographer( 7545): Skipped 229 frames!  The application may be doing too much work on its main thread.
+I/Quality ( 7545): Skipped: false 229 cost 3828.5132 refreshRate 16666667 processName com.example.mobile
+E/ActivityThread( 7545): asyncReportFrames skippedFrames= 229 true
+D/FlutterJNI( 7545): Sending viewport metrics to the engine.
+I/Quality ( 7545): Skipped: false 1 cost 29.385292 refreshRate 16666667 processName com.example.mobile
+E/ActivityThread( 7545): asyncReportFrames skippedFrames= 1 true
+E/Parcel  ( 7545): Reading a NULL string not supported here.
+W/OplusExSystemServiceHelper( 7545): checkOplusExSystemService intent getComponent is null
+D/FlutterJNI( 7545): Sending viewport metrics to the engine.
+I/Quality ( 7545): Skipped: false 1 cost 18.205875 refreshRate 16666667 processName com.example.mobile
+E/ActivityThread( 7545): asyncReportFrames skippedFrames= 1 true
+E/FirebearStorageCryptoHelper( 7545): Exception encountered during crypto setup:
+E/FirebearStorageCryptoHelper( 7545): Keystore cannot load the key with ID: firebear_main_key_id_for_storage_crypto.W0RFRkFVTFRd+MTo4MDQ5NTYyMDczNzY6YW5kcm9pZDoxYTc2ZmZiMDlhODE2Nzg5NTcwZDk1
+D/ViewRootImpl[MainActivity]( 7545):  debugCancelDraw some OnPreDrawListener onPreDraw return false,cancelDraw=true,count=50,android.view.ViewRootImpl@f06019b
+E/FirebearStorageCryptoHelper( 7545): Exception encountered while decrypting bytes:
+E/FirebearStorageCryptoHelper( 7545): decryption failed
+Lost connection to device.

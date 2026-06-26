@@ -76,6 +76,10 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
   String _currentTime = '';
   late String? _streamUrl;
   late bool _isStreamLoading;
+  late final GlobalKey<CameraVideoPlayerState> _videoPlayerKey;
+  late final CameraVideoPlayerController _videoPlayerController;
+  Widget? _videoPlayerWidget;
+  bool _isStreamRequestInFlight = false;
   bool _showLoadingForNextStreamRequest = false;
   String? _streamErrorMessage;
 
@@ -83,31 +87,76 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
   void initState() {
     super.initState();
     context.read<SuppressCubit>().loadState(widget.device.id);
-    _streamUrl = _normalizedUrl(widget.device.rtspUrl);
+    context.read<HomeBloc>().add(const ResetCameraStreamUrlEvent());
+    final cachedStreamUrl = _normalizedUrl(
+      context.read<HomeBloc>().lastKnownStreamUrl,
+    );
+    _streamUrl = cachedStreamUrl ?? _normalizedUrl(widget.device.rtspUrl);
+    debugPrint('[CameraDetail] initState streamUrl: $_streamUrl');
     _isStreamLoading = _streamUrl == null;
+    debugPrint('[CameraDetail] initState isLoading: $_isStreamLoading');
+    _videoPlayerKey = GlobalKey<CameraVideoPlayerState>();
+    _videoPlayerController = CameraVideoPlayerController(
+      currentTime: _currentTime,
+      isLoading: _isStreamLoading,
+      errorMessage: _streamErrorMessage,
+    );
+    _videoPlayerWidget = _createVideoPlayer(_streamUrl);
+    debugPrint(
+      '[CameraDetail] VideoPlayer widget created, url: '
+      '${_redactedNullableStreamUrl(_streamUrl)}',
+    );
     _updateTime();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) _updateTime();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (cachedStreamUrl != null) {
+        _videoPlayerKey.currentState?.updateUrl(cachedStreamUrl);
+        return;
+      }
       _requestStreamUrl(showLoading: _streamUrl == null);
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    debugPrint(
+      '[CameraDetail] didChangeDependencies() at: ${DateTime.now().toIso8601String()}',
+    );
+  }
+
   void _updateTime() {
     if (!mounted) return;
-    setState(() => _currentTime = _formatTime(DateTime.now()));
+    final nextTime = _formatTime(DateTime.now());
+    _videoPlayerController.update(currentTime: nextTime);
+    _currentTime = nextTime;
   }
 
   @override
   void dispose() {
+    debugPrint(
+      '[CameraDetail] dispose() called at: ${DateTime.now().toIso8601String()}',
+    );
+    final serialNumber = widget.device.serialNumber?.trim();
+    if (serialNumber != null && serialNumber.isNotEmpty) {
+      context.read<HomeBloc>().add(
+        CameraDetailClosed(serialNumber: serialNumber),
+      );
+    }
     _clockTimer?.cancel();
+    _videoPlayerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      '[CameraDetail] build() called, streamUrl: '
+      '${_redactedNullableStreamUrl(_streamUrl)}, isLoading: $_isStreamLoading',
+    );
     return MultiBlocListener(
       listeners: [
         BlocListener<HomeBloc, HomeState>(
@@ -116,6 +165,9 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
               state is CameraStreamUrlLoaded ||
               state is CameraStreamUrlFailure,
           listener: (context, state) {
+            debugPrint(
+              '[CameraDetail] BlocListener state: ${state.runtimeType}',
+            );
             if (state is CameraStreamUrlLoading &&
                 state.cameraId == widget.device.id) {
               setState(() {
@@ -123,25 +175,55 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                     _streamUrl == null || _showLoadingForNextStreamRequest;
                 _streamErrorMessage = null;
               });
+              _videoPlayerController.update(
+                isLoading: _isStreamLoading,
+                clearError: true,
+              );
+              _videoPlayerKey.currentState?.updateDisplayState(
+                isLoading: _isStreamLoading,
+              );
               return;
             }
-            if (state is CameraStreamUrlLoaded &&
-                state.cameraId == widget.device.id) {
+            if (state is CameraStreamUrlLoaded) {
+              if (state.cameraId != widget.device.id) return;
+              debugPrint(
+                '[CameraDetail] URL received: ${_redactedStreamUrl(state.streamUrl)}',
+              );
+              debugPrint(
+                '[CameraDetail] URL timestamp: ${DateTime.now().toIso8601String()}',
+              );
+              _isStreamRequestInFlight = false;
+              _videoPlayerKey.currentState?.updateUrl(state.streamUrl);
               setState(() {
                 _streamUrl = state.streamUrl;
+                _videoPlayerWidget = _createVideoPlayer(state.streamUrl);
                 _isStreamLoading = false;
                 _showLoadingForNextStreamRequest = false;
                 _streamErrorMessage = null;
               });
+              _videoPlayerController.update(isLoading: false, clearError: true);
+              _videoPlayerKey.currentState?.updateDisplayState(
+                isLoading: false,
+              );
               return;
             }
-            if (state is CameraStreamUrlFailure &&
-                state.cameraId == widget.device.id) {
+            if (state is CameraStreamUrlFailure) {
+              if (state.cameraId != widget.device.id) return;
+              debugPrint('[CameraDetail] Stream FAILED: ${state.message}');
+              _isStreamRequestInFlight = false;
               setState(() {
                 _isStreamLoading = false;
                 _showLoadingForNextStreamRequest = false;
                 _streamErrorMessage = state.message;
               });
+              _videoPlayerController.update(
+                isLoading: false,
+                errorMessage: state.message,
+              );
+              _videoPlayerKey.currentState?.updateDisplayState(
+                isLoading: false,
+                errorMessage: state.message,
+              );
             }
           },
         ),
@@ -182,16 +264,7 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                       state is CameraStreamUrlLoading ||
                       state is CameraStreamUrlLoaded ||
                       state is CameraStreamUrlFailure,
-                  builder: (context, state) {
-                    return CameraVideoPlayer(
-                      rtspUrl: _streamUrl,
-                      currentTime: _currentTime,
-                      onFrameCaptured: widget.onThumbnailCaptured,
-                      isLoading: _isStreamLoading,
-                      errorMessage: _streamErrorMessage,
-                      onRetry: () => _requestStreamUrl(showLoading: true),
-                    );
-                  },
+                  builder: (context, state) => _buildVideoArea(),
                 ),
               ),
             ),
@@ -264,6 +337,13 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
 
   void _requestStreamUrl({required bool showLoading}) {
     final serialNumber = widget.device.serialNumber?.trim() ?? '';
+    debugPrint(
+      '[CameraDetail] _requestStreamUrl called, serial: $serialNumber, showLoading: $showLoading',
+    );
+    if (_isStreamRequestInFlight) {
+      debugPrint('[CameraDetail] duplicate stream request ignored');
+      return;
+    }
     if (serialNumber.isEmpty) {
       setState(() {
         _streamUrl = null;
@@ -272,19 +352,65 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
         _streamErrorMessage =
             'Không tìm thấy mã serial của camera. Vui lòng ghép nối lại thiết bị.';
       });
+      _videoPlayerController.update(
+        isLoading: false,
+        errorMessage: _streamErrorMessage,
+      );
+      _videoPlayerKey.currentState?.updateDisplayState(
+        isLoading: false,
+        errorMessage: _streamErrorMessage,
+      );
       return;
     }
 
+    _isStreamRequestInFlight = true;
     setState(() {
       _showLoadingForNextStreamRequest = showLoading;
       _isStreamLoading = showLoading || _streamUrl == null;
       _streamErrorMessage = null;
     });
+    _videoPlayerController.update(
+      isLoading: _isStreamLoading,
+      clearError: true,
+    );
+    _videoPlayerKey.currentState?.updateDisplayState(
+      isLoading: _isStreamLoading,
+    );
     context.read<HomeBloc>().add(
       CameraStreamUrlRequested(
         cameraId: widget.device.id,
         serialNumber: serialNumber,
       ),
+    );
+  }
+
+  Widget _buildVideoArea() {
+    final errorMessage = _streamErrorMessage;
+    if (errorMessage != null && errorMessage.trim().isNotEmpty) {
+      return _VideoErrorView(
+        message: errorMessage,
+        onRetry: () => _requestStreamUrl(showLoading: true),
+      );
+    }
+    if (_isStreamLoading) {
+      return const _VideoLoadingView();
+    }
+    return _videoPlayerWidget!;
+  }
+
+  Widget _createVideoPlayer(String? streamUrl) {
+    return CameraVideoPlayer(
+      key: _videoPlayerKey,
+      rtspUrl: streamUrl,
+      controller: _videoPlayerController,
+      onFrameCaptured: widget.onThumbnailCaptured,
+      onRetry: () => _requestStreamUrl(showLoading: true),
+      onPlaybackError: (error) {
+        if (!mounted) return;
+        context.read<HomeBloc>().add(
+          CameraStreamPlaybackFailed(cameraId: widget.device.id, error: error),
+        );
+      },
     );
   }
 
@@ -449,6 +575,62 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
 
 // ─── helper sliver wrappers ───────────────────────────────────────────────────
 
+class _VideoLoadingView extends StatelessWidget {
+  const _VideoLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+      ),
+    );
+  }
+}
+
+class _VideoErrorView extends StatelessWidget {
+  const _VideoErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.videocam_off_rounded,
+              size: 48,
+              color: Colors.white54,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              label: const Text(
+                'Thử lại',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SliverEventSection extends StatelessWidget {
   const _SliverEventSection({required this.child});
   final Widget child;
@@ -593,8 +775,21 @@ String _formatTime(DateTime time) {
 }
 
 String? _normalizedUrl(String? url) {
-  final trimmed = url?.trim() ?? '';
+  if (url == null) return null;
+  final trimmed = url.trim();
   return trimmed.isEmpty ? null : trimmed;
+}
+
+String _redactedStreamUrl(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null || uri.host.isEmpty) return 'invalid';
+  final port = uri.hasPort ? ':${uri.port}' : '';
+  return '${uri.scheme}://${uri.host}$port${uri.path}';
+}
+
+String _redactedNullableStreamUrl(String? url) {
+  if (url == null || url.trim().isEmpty) return 'unavailable';
+  return _redactedStreamUrl(url);
 }
 
 String _formatRemainingDuration(DateTime suppressedUntil) {

@@ -1,14 +1,29 @@
 // lib/features/household_invite/presentation/cubit/pending_invites_cubit.dart
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/features/home/presentation/bloc/home_bloc.dart';
+import 'package:mobile/features/home/presentation/bloc/home_event.dart';
 import 'package:mobile/features/household_invite/data/datasources/household_invite_remote_data_source.dart';
 import 'package:mobile/features/household_invite/domain/entities/invite_request.dart';
 import 'package:mobile/features/household_invite/presentation/cubit/pending_invites_state.dart';
+import 'package:mobile/features/notifications/data/datasources/notification_local_data_source.dart';
+import 'package:mobile/features/notifications/presentation/cubit/notifications_cubit.dart';
+import 'package:mobile/features/session/domain/repositories/session_repository.dart';
 
 class PendingInvitesCubit extends Cubit<PendingInvitesState> {
-  PendingInvitesCubit(this._dataSource) : super(const PendingInvitesInitial());
+  PendingInvitesCubit(
+    this._dataSource,
+    this._notificationLocalDataSource,
+    this._notificationsCubit,
+    this._sessionRepository,
+    this._homeBloc,
+  ) : super(const PendingInvitesInitial());
 
   final HouseholdInviteRemoteDataSource _dataSource;
+  final NotificationLocalDataSource _notificationLocalDataSource;
+  final NotificationsCubit _notificationsCubit;
+  final SessionRepository _sessionRepository;
+  final HomeBloc _homeBloc;
 
   Future<void> loadPendingInvites() async {
     emit(const PendingInvitesLoading());
@@ -24,7 +39,8 @@ class PendingInvitesCubit extends Cubit<PendingInvitesState> {
     }
   }
 
-  Future<void> respondToInvite(String inviteRequestId, String action) async {
+  Future<void> respondToInvite(String inviteRequestId, bool accepted) async {
+    final action = accepted ? 'accepted' : 'declined';
     List<InviteRequest> currentInvites = [];
     if (state is PendingInvitesLoaded) {
       currentInvites = (state as PendingInvitesLoaded).invites;
@@ -35,7 +51,7 @@ class PendingInvitesCubit extends Cubit<PendingInvitesState> {
     emit(RespondingToInvite(inviteRequestId, currentInvites));
 
     try {
-      await _dataSource.respondToInvite(inviteRequestId, action);
+      await _dataSource.respondToInvite(inviteRequestId, accepted);
 
       // Update local list
       final updatedInvites = currentInvites
@@ -43,10 +59,28 @@ class PendingInvitesCubit extends Cubit<PendingInvitesState> {
           .toList();
       emit(RespondSuccess(inviteRequestId, action, updatedInvites));
 
-      // We can also re-emit loaded/empty after a short delay so the UI stays clean if we don't depend on Success state to show "Đã chấp nhận"
-      // But the requirements say "Replace action buttons with muted text label 'Đã chấp nhận'".
-      // This means we might want to keep it in the list locally for a moment, or rely on a local cache.
-      // For now, emit RespondSuccess and the UI can handle the visual transition.
+      try {
+        await _notificationLocalDataSource.removeNotificationByInviteRequestId(
+          inviteRequestId,
+        );
+        _notificationsCubit.removeByInviteRequestId(inviteRequestId);
+
+        if (action == 'accepted') {
+          try {
+            final invite = currentInvites.firstWhere(
+              (i) => i.inviteRequestId == inviteRequestId,
+            );
+            await _sessionRepository.switchHousehold(invite.householdId);
+          } catch (_) {
+            // fallback if invite is somehow missing
+            _sessionRepository.clearCachedSession();
+            await _sessionRepository.provisionSession();
+          }
+          _homeBloc.add(const HomeStarted());
+        }
+      } catch (_) {
+        // Log error but do not emit error state since action succeeded
+      }
     } catch (e) {
       emit(
         PendingInvitesError(
