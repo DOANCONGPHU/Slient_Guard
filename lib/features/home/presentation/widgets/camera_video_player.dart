@@ -262,6 +262,7 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
   final List<StreamSubscription<Object?>> _playerSubscriptions = [];
   bool _isOpening = false;
   bool _hasOpenedUrl = false;
+  bool _hasRenderedFrame = false;
   late bool _externalIsLoading;
   String? _externalErrorMessage;
   String? _errorMessage;
@@ -302,6 +303,7 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
     _currentUrl = normalizedUrl;
     if (changedUrl) {
       _hasOpenedUrl = false;
+      _hasRenderedFrame = false;
       _playbackRetryAttempt = 0;
       _reportedPlaybackFailure = false;
       _retryMessage = null;
@@ -339,6 +341,7 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
       _currentUrl = null;
       _pendingUrl = null;
       _hasOpenedUrl = false;
+      _hasRenderedFrame = false;
       _playbackRetryAttempt = 0;
       _reportedPlaybackFailure = false;
       _retryMessage = null;
@@ -491,8 +494,6 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
       await player.open(_mediaForStream(streamUrl), play: true);
       await player.play();
       _hasOpenedUrl = true;
-      _playbackRetryAttempt = 0;
-      _reportedPlaybackFailure = false;
       _retryMessage = null;
       debugPrint('[VideoPlayer] playing url=${_redactedStreamUrl(streamUrl)}');
       _startBlackScreenTimer();
@@ -535,10 +536,11 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
         debugPrint('[VideoPlayer] completed=$completed');
       }),
       player.stream.width.listen((width) {
-        if (width != null && width > 0) _blackScreenTimer?.cancel();
+        if (width != null && width > 0) _markFrameRendered();
         developer.log('video width: $width', name: 'CameraLivePreview');
       }),
       player.stream.height.listen((height) {
+        if (height != null && height > 0) _markFrameRendered();
         developer.log('video height: $height', name: 'CameraLivePreview');
       }),
     ]);
@@ -584,10 +586,30 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
     _blackScreenTimer?.cancel();
     _blackScreenTimer = Timer(const Duration(seconds: 8), () {
       final player = _player;
-      if (!mounted || (player?.state.width ?? 0) > 0) return;
+      if (!mounted || _hasRenderedFrame) return;
+      if ((player?.state.width ?? 0) > 0 || (player?.state.height ?? 0) > 0) {
+        _markFrameRendered();
+        return;
+      }
       if (_errorMessage == _streamOpenFailedMessage) return;
       _handlePlaybackFailure(_streamOpenFailedMessage, source: 'black_screen');
     });
+  }
+
+  void _markFrameRendered() {
+    _blackScreenTimer?.cancel();
+    if (_hasRenderedFrame &&
+        _playbackRetryAttempt == 0 &&
+        _retryMessage == null &&
+        !_reportedPlaybackFailure) {
+      return;
+    }
+    _hasRenderedFrame = true;
+    _playbackRetryAttempt = 0;
+    _reportedPlaybackFailure = false;
+    _retryMessage = null;
+    debugPrint('[VideoPlayer] first frame rendered');
+    if (mounted) setState(() {});
   }
 
   void _handlePlaybackFailure(
@@ -614,7 +636,7 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
           _isOpening = false;
           _errorMessage = null;
           _retryMessage =
-              'Äang thá»­ phÃ¡t láº¡i ($attempt/${_retryDelays.length})...';
+              'Đang thử phát lại ($attempt/${_retryDelays.length})...';
         });
       }
       _playbackRetryTimer = Timer(delay, () {
@@ -735,6 +757,8 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
     _playbackRetryAttempt = 0;
     _reportedPlaybackFailure = false;
     _retryMessage = null;
+    _hasOpenedUrl = false;
+    _hasRenderedFrame = false;
     if (mounted && _errorMessage != null) {
       setState(() {
         _errorMessage = null;

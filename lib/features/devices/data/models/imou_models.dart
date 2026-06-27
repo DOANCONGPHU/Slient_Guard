@@ -18,15 +18,15 @@ class ImouLiveStreamInfo {
 
   ImouLiveStream? get selectedStream {
     for (final preferredStreamId in const [1, 0]) {
-      for (final preferHttps in const [true, false]) {
+      for (final preferHttp in const [true, false]) {
         for (final stream in streams) {
           if (stream.streamId != preferredStreamId) continue;
           final url = stream.playbackUrl;
           if (url == null || url.isEmpty) continue;
           final isHttps = url.toLowerCase().startsWith('https://');
           final isHttp = url.toLowerCase().startsWith('http://');
-          if (preferHttps && isHttps) return stream;
-          if (!preferHttps && isHttp && !isHttps) return stream;
+          if (preferHttp && isHttp && !isHttps) return stream;
+          if (!preferHttp && isHttps) return stream;
         }
       }
     }

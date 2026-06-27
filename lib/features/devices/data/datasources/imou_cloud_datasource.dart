@@ -82,7 +82,7 @@ class ImouCloudDataSourceImpl implements ImouCloudDataSource {
     final validSeconds = expireTime > 600 ? expireTime - 600 : expireTime;
     final accessToken = ImouAccessToken(
       token: token,
-      expireAt: DateTime.now().add(Duration(seconds: validSeconds)),
+      expireAt: DateTime.now().add(Duration(seconds: validSeconds - 300)),
     );
     _cachedToken = accessToken;
     return accessToken;

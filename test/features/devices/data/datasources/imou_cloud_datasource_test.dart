@@ -126,13 +126,13 @@ void main() {
               {
                 'streamId': 1,
                 'status': '1',
-                'hls': 'http://sd.example.com/live/camera.m3u8',
+                'hls': 'http://sd.example.com:8888/live/camera.m3u8',
                 'liveToken': 'sd-http-token',
               },
               {
                 'streamId': 1,
                 'status': '1',
-                'hls': 'https://sd.example.com/live/camera.m3u8',
+                'hls': 'https://sd.example.com:8890/live/camera.m3u8',
                 'liveToken': 'sd-https-token',
               },
             ],
@@ -145,8 +145,8 @@ void main() {
         deviceSn: 'CAM123',
       );
 
-      expect(result.liveToken, 'sd-https-token');
-      expect(result.hlsUrl, 'https://sd.example.com/live/camera.m3u8');
+      expect(result.liveToken, 'sd-http-token');
+      expect(result.hlsUrl, 'http://sd.example.com:8888/live/camera.m3u8');
       expect(result.status, 'ready');
     });
 

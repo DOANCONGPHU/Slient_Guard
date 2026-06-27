@@ -64,6 +64,18 @@ class ImouStreamRepositoryImpl implements ImouStreamRepository {
       accessTokenValue = accessToken.token;
       _throwIfCancelledOrStale(normalizedSn, request);
 
+      final isOnline = await _dataSource.isDeviceOnline(
+        accessToken: accessToken.token,
+        deviceSn: normalizedSn,
+      );
+      if (!isOnline) {
+        throw const ImouApiException(
+          'DEVICE_OFFLINE',
+          'Camera is offline or disconnected',
+        );
+      }
+      _throwIfCancelledOrStale(normalizedSn, request);
+
       bindLiveToken = await _dataSource.bindDeviceLive(
         accessToken: accessToken.token,
         deviceSn: normalizedSn,
