@@ -378,5 +378,12 @@ class _FakeImouCloudDataSource implements ImouCloudDataSource {
   }
 
   @override
+  Future<ImouRtmpLiveInfo> createDeviceRtmpLive({
+    required String accessToken,
+    required String deviceSn,
+    String channelId = '0',
+  }) async => ImouRtmpLiveInfo(deviceId: deviceSn, channelId: channelId);
+
+  @override
   void clearAccessToken() {}
 }

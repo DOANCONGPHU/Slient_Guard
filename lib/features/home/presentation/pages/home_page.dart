@@ -12,10 +12,11 @@ import 'package:mobile/core/utils/app_colors.dart';
 import 'package:mobile/core/theme/app_spacing.dart';
 import 'package:mobile/core/widgets/wave_text_loader.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart'; // FIX: session-expired UI needs to trigger sign-out.
-import 'package:mobile/features/auth/presentation/bloc/auth_event.dart'; // FIX: reuse existing logout event instead of changing router/auth logic.
+import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
 import 'package:mobile/features/automation/presentation/pages/automation_page.dart';
 import 'package:mobile/features/account/presentation/pages/account_page.dart';
 import 'package:mobile/features/reports/presentation/pages/reports_page.dart';
+import 'package:mobile/features/rtmp_live/presentation/pages/rtmp_live_page.dart';
 import 'package:mobile/features/home/domain/entities/camera_device.dart';
 import 'package:mobile/features/home/presentation/bloc/home_bloc.dart';
 import 'package:mobile/features/home/presentation/bloc/home_event.dart';
@@ -50,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  static const _tabTitles = ['Nhà của tôi', 'Tự động', 'Báo cáo', 'Tài khoản'];
+  static const _tabTitles = ['Nhà của tôi', 'Tự động', 'Live RTMP', 'Báo cáo', 'Tài khoản'];
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +145,7 @@ class _HomePageState extends State<HomePage> {
                       children: const [
                         _HomeTab(),
                         AutomationPage(),
+                        RtmpLivePage(),
                         ReportsPage(),
                         AccountPage(),
                       ],
@@ -162,13 +164,7 @@ class _HomePageState extends State<HomePage> {
             floatingActionButton: _selectedTab == 0 ? const _HomeFabs() : null,
             bottomNavigationBar: BottomNavBar(
               selectedIndex: _selectedTab,
-              uploadDisabled: context.select(
-                (VideoUploadBloc bloc) => bloc.state is VideoUploadLoading,
-              ),
               onSelected: (index) => setState(() => _selectedTab = index),
-              onUploadSelected: () {
-                _showVideoUploadIntroSheet(context);
-              },
             ),
           ),
         ),
@@ -198,6 +194,7 @@ class _HomePageState extends State<HomePage> {
       );
   }
 
+  // ignore: unused_element
   void _showVideoUploadIntroSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,

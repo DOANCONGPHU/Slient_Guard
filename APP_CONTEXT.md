@@ -243,6 +243,7 @@ Thành phần chính:
 - backend warm-up state
 - unauthorized state
 - `CameraDetailClosed` (giải phóng phiên stream)
+- **Error Localization**: Xử lý các mã lỗi phổ biến từ Imou (ví dụ: `12012` - "Device no response") và ánh xạ thành thông báo thân thiện bằng tiếng Việt như "Mất kết nối internet" để tránh hiển thị log raw lên UI.
 
 `SuppressCubit` & `MonitoringSuppressService`:
 - Quản lý việc tạm dừng giám sát/gửi cảnh báo từ camera theo thời gian được chọn (30 phút, 2 giờ, 12 giờ, 24 giờ).
@@ -256,7 +257,7 @@ Thành phần chính:
 ### 8.2 `features/devices` (TÁI CẤU TRÚC ĐƠN GIẢN HÓA)
 
 Tính năng quét QR và ghép nối camera đã được đơn giản hóa tối đa nhằm loại bỏ các thành phần phức tạp không cần thiết (đã xóa ONVIF discovery, RTSP/ONVIF configuration, gallery QR import, và thư viện `xml`):
-- `DevicePairingBloc`: Chỉ còn quản lý flow quét mã QR trực tiếp từ camera. Khi quét thành công, trích xuất serial number của thiết bị thông qua hàm `parseSerialNumber(rawQr)`.
+- `DevicePairingBloc`: Chỉ còn quản lý flow quét mã QR trực tiếp từ camera. Khi quét thành công, trích xuất serial number của thiết bị thông qua hàm `parseSerialNumber(rawQr)`. Ngoài ra, tiến trình add camera qua QR sẽ tự động in log (log device API key) ra console để dễ debug quá trình thiết lập.
 - Giao diện `DevicePairingPage` được làm gọn lại theo luồng: Chuẩn bị quét -> Quét QR -> Đang kết nối (`DevicePairingLoading`) -> Thành công (`DevicePairingSuccess`) hoặc Lỗi (`DevicePairingError`).
 - Thiết bị sau khi quét sẽ tự động được gán tên mặc định là `Camera $serialNumber` và gọi API `savePairedDevice` lên backend AI mà không cần bước nhập tên hay cấu hình IP thủ công.
 
@@ -314,17 +315,12 @@ Tình trạng hiện tại:
 - một phần là UI scaffold / coming-soon interaction
 - emergency contacts có feature data local riêng
 
-### 8.5 `features/automation` - emergency contacts
+### 8.5 `features/automation` - emergency contacts (ĐÃ ĐƠN GIẢN HÓA)
 
-Data và state:
+Dựa theo yêu cầu gần đây, luồng tích hợp với bảng contacts phức tạp trước đó đã bị gỡ bỏ để tránh phát sinh lỗi đồng bộ. 
+Tính năng gọi điện khẩn cấp hiện tại (nếu có) được thiết kế tinh gọn hơn hoặc được gỡ bỏ khỏi UI dashboard.
 
-- `EmergencyContactsLocalDataSource`
-- `EmergencyContactsRepositoryImpl`
-- `EmergencyContactsCubit`
-- `EmergencyContactsPage`
-
-Route:
-
+Route (nếu còn):
 - `/emergency-contacts`
 
 ### 8.6 `features/household_invite`
@@ -464,6 +460,7 @@ Gần đây app đã có nhiều điều chỉnh để nâng cao trải nghiệm
   - Fix lỗi layout bị co rút khi xảy ra lỗi tại sự kiện ở phần bottom screen bằng cách set layout full-width và dùng component `AppEmptyState` đồng bộ.
 - **Video Upload**: Bổ sung Intro Bottom Sheet (`video_upload_intro_sheet.dart`) để giải thích chi tiết về tính năng gửi video phân tích AI trước khi mở thư viện.
 - **Account Tab**: Đồng nhất header (`AccountPageHeader`) và padding cho các trang con (Thông báo, Giao diện, Trợ giúp). Các tính năng chưa hoàn thiện sẽ hiện thông báo "Coming soon". Thêm trang `/notification-settings` cho phép người dùng tùy chỉnh thiết lập cảnh báo.
+- **Notifications Page**: Giao diện thẻ thông báo đã được thiết kế lại (redesign) để trông cao cấp hơn, tinh chỉnh các đường cong (border radius) và layout bo góc đẹp mắt thay vì dùng UI mặc định. Tích hợp trực tiếp email/người gửi vào thẳng UI thông báo.
 - **Camera Detail & Video Player**:
   - Khung video được fix cứng tỷ lệ 16:9 để tránh lỗi layout chiếm toàn màn hình trên iPhone, giúp nội dung phía dưới cuộn (scrollable) bình thường, kèm loading/error states rõ ràng.
   - Sự kiện gần đây được làm mới card layout: loại bỏ mock image thumbnail do thực tế backend không cung cấp ảnh thumbnail, hiển thị thông tin thực tế từ backend gồm Duration, Confidence, Room, Status và Severity Badge thống nhất. Xóa bỏ các số liệu test cứng (`999s` / `95%` confidence) do đây là mock data.

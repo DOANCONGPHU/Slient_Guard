@@ -70,6 +70,10 @@ import 'package:mobile/features/reports/domain/repositories/event_history_reposi
 import 'package:mobile/features/reports/domain/usecases/get_event_history.dart';
 import 'package:mobile/features/reports/presentation/cubit/event_history_cubit.dart';
 import 'package:mobile/features/video_upload/presentation/bloc/video_upload_bloc.dart';
+import 'package:mobile/features/rtmp_live/domain/usecases/get_rtmp_stream_url.dart';
+import 'package:mobile/features/rtmp_live/domain/repositories/rtmp_stream_repository.dart';
+import 'package:mobile/features/rtmp_live/data/repositories/rtmp_stream_repository_impl.dart';
+import 'package:mobile/features/rtmp_live/presentation/bloc/rtmp_live_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final sl = GetIt.instance;
@@ -176,6 +180,16 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
   });
 
   _logDiStep('di.init.deviceHomeRegistrations', () {
+    // --- RTMP Live Feature ---
+    sl
+      ..registerLazySingleton(() => GetRtmpStreamUrl(sl()))
+      ..registerLazySingleton<RtmpStreamRepository>(
+        () => RtmpStreamRepositoryImpl(sl()),
+      )
+      ..registerFactory(
+        () => RtmpLiveBloc(getRtmpStreamUrl: sl()),
+      );
+
     sl
       ..registerLazySingleton<DevicePermissionDataSource>(
         DevicePermissionDataSourceImpl.new,
