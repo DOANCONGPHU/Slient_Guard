@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:mobile/core/bootstrap/app_initializer.dart';
+import 'package:mobile/core/connectivity/connectivity_cubit.dart';
 import 'package:mobile/core/router/app_router.dart';
 import 'package:mobile/core/services/local_notification_service.dart';
 import 'package:mobile/core/services/monitoring_suppress_service.dart';
@@ -21,6 +22,7 @@ import 'package:mobile/features/notifications/presentation/cubit/notifications_c
 import 'package:mobile/features/video_upload/presentation/bloc/video_upload_bloc.dart';
 import 'package:mobile/firebase_options.dart';
 import 'package:mobile/injection_container.dart' as di;
+import 'package:mobile/core/widgets/offline_banner_layer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
@@ -223,6 +225,7 @@ class MyApp extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: [
+        BlocProvider(create: (_) => di.sl<ConnectivityCubit>()),
         BlocProvider(create: (_) => di.sl<AuthBloc>()),
         BlocProvider(create: (_) => di.sl<VideoUploadBloc>()),
         BlocProvider.value(value: di.sl<NotificationsCubit>()),
@@ -238,6 +241,9 @@ class MyApp extends StatelessWidget {
             themeMode: themeController.themeMode,
             locale: const Locale('vi', 'VN'),
             routerConfig: appRouter.router,
+            builder: (context, child) {
+              return OfflineBannerLayer(child: child!);
+            },
           );
         },
       ),

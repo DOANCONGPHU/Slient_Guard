@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:mobile/features/devices/data/datasources/imou_cloud_datasource.dart';
+import 'package:mobile/features/devices/data/models/imou_models.dart';
 import '../../domain/entities/rtmp_stream.dart';
 import '../../domain/repositories/rtmp_stream_repository.dart';
 
@@ -34,10 +36,38 @@ class RtmpStreamRepositoryImpl implements RtmpStreamRepository {
     }
 
     // Bước 3: Tạo địa chỉ RTMP live qua Imou Cloud API
-    final info = await _dataSource.createDeviceRtmpLive(
-      accessToken: token.token,
-      deviceSn: deviceSn,
-    );
+    ImouRtmpLiveInfo info;
+    try {
+      info = await _dataSource.createDeviceRtmpLive(
+        accessToken: token.token,
+        deviceSn: deviceSn,
+      );
+    } on ImouApiException catch (e) {
+      if (e.code == 'LV1001') {
+        debugPrint(
+          '[RtmpRepo] LV1001 — stopping old RTMP session for $deviceSn',
+        );
+        try {
+          await _dataSource.stopDeviceRtmpLive(
+            accessToken: token.token,
+            deviceSn: deviceSn,
+          );
+          debugPrint('[RtmpRepo] Old RTMP session stopped — retrying');
+        } catch (stopErr) {
+          // Bỏ qua lỗi stop — camera có thể đã tự ngắt session
+          debugPrint(
+            '[RtmpRepo] stopDeviceRtmpLive failed (ignored): $stopErr',
+          );
+        }
+        // Retry tạo lại session sau khi stop
+        info = await _dataSource.createDeviceRtmpLive(
+          accessToken: token.token,
+          deviceSn: deviceSn,
+        );
+      } else {
+        rethrow;
+      }
+    }
 
     // Bước 4: Chọn URL tốt nhất — ưu tiên HD, fallback SD
     final url = info.bestUrl;

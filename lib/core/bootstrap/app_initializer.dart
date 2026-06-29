@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:mobile/core/router/app_router.dart';
 import 'package:mobile/core/router/auth_notifier.dart';
 import 'package:mobile/core/services/fcm_service.dart';
@@ -13,6 +14,7 @@ import 'package:mobile/features/household_invite/data/datasources/household_invi
 import 'package:mobile/features/notifications/domain/entities/notification_alert.dart';
 import 'package:mobile/features/notifications/presentation/cubit/notifications_cubit.dart';
 import 'package:mobile/injection_container.dart' as di;
+import 'package:intl/date_symbol_data_local.dart';
 
 class AppInitializationResult {
   const AppInitializationResult({
@@ -32,6 +34,13 @@ class AppInitializer {
   Future<AppInitializationResult> initializeAfterFirstFrame({
     AppRouter? appRouter,
   }) async {
+    await _logStartupAsync(
+      'intl.initializeDateFormatting',
+      () => initializeDateFormatting('vi', null),
+    );
+    debugPrint('[STEP] initializeDateFormatting done');
+    await _yieldToUi();
+
     final initializeFirebase = this.initializeFirebase;
     if (initializeFirebase != null) {
       await _logStartupAsync(
@@ -62,6 +71,12 @@ class AppInitializer {
     await _yieldToUi();
     debugPrint('[STEP] yield after di.init done');
 
+    await _logStartupAsync('MediaKit.ensureInitialized', () async {
+      await Future<void>(() => MediaKit.ensureInitialized());
+    });
+    debugPrint('[STEP] MediaKit.ensureInitialized done');
+    await _yieldToUi();
+
     await _logStartupAsync(
       'ThemeController.load',
       () => di.sl<ThemeController>().load(),
@@ -76,7 +91,9 @@ class AppInitializer {
     );
     debugPrint('[STEP] MonitoringSuppressService.pruneExpired done');
     await _yieldToUi();
-    debugPrint('[STEP] yield after MonitoringSuppressService.pruneExpired done');
+    debugPrint(
+      '[STEP] yield after MonitoringSuppressService.pruneExpired done',
+    );
 
     final notificationsCubit = di.sl<NotificationsCubit>();
     final resolvedRouter = appRouter ?? AppRouter(di.sl());
@@ -114,24 +131,29 @@ class AppInitializer {
   }
 
   void scheduleMessagingSetup(AppInitializationResult result) {
-    unawaited(
-      _initializeMessagingSetup(result).catchError((error, stackTrace) {
-        debugPrint('[CRASH] scheduleMessagingSetup failed: $error\n$stackTrace');
-        // Re-throw so Crashlytics catches it
-        Error.throwWithStackTrace(error, stackTrace as StackTrace);
-      }),
-    );
+    Future.microtask(() async {
+      try {
+        await _initializeMessagingSetup(result);
+      } catch (error, stackTrace) {
+        debugPrint(
+          '[CRASH] scheduleMessagingSetup failed: $error\n$stackTrace',
+        );
+      }
+    });
   }
 
   Future<void> _initializeMessagingSetup(AppInitializationResult result) async {
     try {
       await _logStartupAsync(
         'AppInitializer.FcmService.initialize',
-        () => di.sl<FcmService>().initialize(
-          notificationsCubit: result.notificationsCubit,
-          onNotificationTap: (alert) =>
-              _openNotificationAlert(result.appRouter, alert),
-        ),
+        () => di
+            .sl<FcmService>()
+            .initialize(
+              notificationsCubit: result.notificationsCubit,
+              onNotificationTap: (alert) =>
+                  _openNotificationAlert(result.appRouter, alert),
+            )
+            .timeout(const Duration(seconds: 10)),
       );
     } catch (error, stackTrace) {
       developer.log(
@@ -224,7 +246,9 @@ class AppInitializer {
 
   Future<NotificationAlert?> _takeInitialFcmAlert() async {
     try {
-      return await di.sl<FcmService>().takeInitialAlert();
+      return await di.sl<FcmService>().takeInitialAlert().timeout(
+        const Duration(seconds: 5),
+      );
     } catch (error, stackTrace) {
       developer.log(
         'Initial FCM alert lookup failed; continuing startup.',

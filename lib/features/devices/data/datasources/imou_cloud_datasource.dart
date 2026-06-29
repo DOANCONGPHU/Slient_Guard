@@ -44,6 +44,12 @@ abstract interface class ImouCloudDataSource {
     String channelId = '0',
   });
 
+  Future<void> stopDeviceRtmpLive({
+    required String accessToken,
+    required String deviceSn,
+    String channelId = '0',
+  });
+
   void clearAccessToken();
 }
 
@@ -251,6 +257,21 @@ class ImouCloudDataSourceImpl implements ImouCloudDataSource {
       rtmpSd: rtmpSd,
       rtmpHd: rtmpHd,
     );
+  }
+
+  @override
+  Future<void> stopDeviceRtmpLive({
+    required String accessToken,
+    required String deviceSn,
+    String channelId = '0',
+  }) async {
+    debugPrint('[ImouCloud] stopDeviceRtmpLive deviceId=$deviceSn');
+    await _post(
+      '/deleteDeviceRtmpLive',
+      token: accessToken,
+      params: {'deviceId': deviceSn, 'channelId': channelId},
+    );
+    debugPrint('[ImouCloud] stopDeviceRtmpLive success');
   }
 
   Future<Map<String, dynamic>> _post(

@@ -25,7 +25,5 @@ abstract final class AppConfig {
     defaultValue: '201c43cf082041a48e5bd69be23cf4',
   );
 
-
-
   static const Duration networkTimeout = Duration(seconds: 15);
 }

@@ -7,6 +7,7 @@ import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile/core/config/app_config.dart';
+import 'package:mobile/core/connectivity/connectivity_cubit.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/core/network/auth_interceptor.dart';
 import 'package:mobile/core/router/auth_notifier.dart';
@@ -14,6 +15,7 @@ import 'package:mobile/core/services/phone_dialer_service.dart';
 import 'package:mobile/features/household_invite/data/datasources/household_invite_remote_data_source.dart';
 import 'package:mobile/features/household_invite/presentation/cubit/invite_management_cubit.dart';
 import 'package:mobile/features/household_invite/presentation/cubit/pending_invites_cubit.dart';
+import 'package:mobile/core/services/connectivity_service.dart';
 import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/local_notification_service.dart';
 import 'package:mobile/core/services/monitoring_suppress_service.dart';
@@ -93,6 +95,8 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
       ..registerLazySingleton<http.Client>(
         () => FirebaseAuthHttpClient(firebaseAuth: sl()),
       )
+      ..registerLazySingleton(() => ConnectivityService())
+      ..registerLazySingleton(() => ConnectivityCubit(sl()))
       ..registerLazySingleton(() => ApiClient(client: sl()))
       ..registerLazySingleton<ApiClient>(
         () => ApiClient(client: http.Client(), baseUrl: AppConfig.imouBaseUrl),
@@ -167,6 +171,7 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
           getCameraDevices: sl(),
           deleteCameraDevice: sl(),
           imouStreamRepository: sl(),
+          connectivityService: sl(),
           sessionRepository:
               sl(), // FIX: HomeBloc reads cached startup session instead of refetching blindly.
         ),
@@ -186,9 +191,7 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
       ..registerLazySingleton<RtmpStreamRepository>(
         () => RtmpStreamRepositoryImpl(sl()),
       )
-      ..registerFactory(
-        () => RtmpLiveBloc(getRtmpStreamUrl: sl()),
-      );
+      ..registerFactory(() => RtmpLiveBloc(getRtmpStreamUrl: sl()));
 
     sl
       ..registerLazySingleton<DevicePermissionDataSource>(
@@ -256,7 +259,7 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
       )
       ..registerLazySingleton(() => SubmitEventFeedback(sl()))
       ..registerFactoryParam<EventFeedbackCubit, String, dynamic>(
-        (eventId, _) => EventFeedbackCubit(sl(), eventId: eventId),
+        (eventId, _) => EventFeedbackCubit(sl(), sl(), eventId: eventId),
       )
       ..registerLazySingleton<EventHistoryRemoteDataSource>(
         () => EventHistoryRemoteDataSourceImpl(sl()),

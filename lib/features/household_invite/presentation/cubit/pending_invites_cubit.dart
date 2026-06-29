@@ -1,6 +1,7 @@
 // lib/features/household_invite/presentation/cubit/pending_invites_cubit.dart
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/core/error/exceptions.dart';
 import 'package:mobile/features/home/presentation/bloc/home_bloc.dart';
 import 'package:mobile/features/home/presentation/bloc/home_event.dart';
 import 'package:mobile/features/household_invite/data/datasources/household_invite_remote_data_source.dart';
@@ -81,6 +82,9 @@ class PendingInvitesCubit extends Cubit<PendingInvitesState> {
       } catch (_) {
         // Log error but do not emit error state since action succeeded
       }
+    } on NoInternetException catch (e) {
+      emit(PendingInvitesError(e.message, currentInvites));
+      emit(PendingInvitesLoaded(currentInvites)); // Revert
     } catch (e) {
       emit(
         PendingInvitesError(

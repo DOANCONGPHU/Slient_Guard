@@ -140,9 +140,10 @@ class _ErrorBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppEmptyState(
       icon: Icons.cloud_off_rounded,
-      title: 'Lỗi kết nối',
-      message:
-          'Không thể tải lịch sử sự kiện. Vui lòng kiểm tra mạng và thử lại.',
+      title: message == 'Không có kết nối mạng'
+          ? 'Chưa kết nối mạng'
+          : 'Lỗi kết nối',
+      message: message,
       primaryActionLabel: 'Thử lại',
       onPrimaryAction: onRetry,
       compact: true,

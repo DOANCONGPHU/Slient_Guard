@@ -24,16 +24,25 @@ enum EventStatus {
   dismissed,
   escalated,
   loggedOnly,
-  unknown;
+  recovered;
 
   static EventStatus fromString(String? raw) {
-    return switch (raw?.toLowerCase()) {
-      'pending' => EventStatus.pending,
+    if (raw == null) return EventStatus.loggedOnly;
+    final normalized = raw
+        .replaceAllMapped(
+          RegExp(r'[A-Z]'),
+          (m) => '_${m.group(0)!.toLowerCase()}',
+        )
+        .toLowerCase()
+        .replaceAll(RegExp(r'^_'), '');
+    return switch (normalized) {
+      'pending'      => EventStatus.pending,
       'acknowledged' => EventStatus.acknowledged,
-      'dismissed' => EventStatus.dismissed,
-      'escalated' => EventStatus.escalated,
-      'logged_only' => EventStatus.loggedOnly,
-      _ => EventStatus.unknown,
+      'dismissed'    => EventStatus.dismissed,
+      'escalated'    => EventStatus.escalated,
+      'logged_only'  => EventStatus.loggedOnly,
+      'recovered'    => EventStatus.recovered,
+      _              => EventStatus.loggedOnly,
     };
   }
 }

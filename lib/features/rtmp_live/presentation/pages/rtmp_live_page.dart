@@ -7,7 +7,9 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:mobile/core/utils/app_colors.dart';
 import 'package:mobile/injection_container.dart';
 
-import '../../../home/domain/usecases/get_camera_devices.dart';
+import 'package:collection/collection.dart';
+import '../../../home/presentation/bloc/home_bloc.dart';
+import '../../../home/presentation/bloc/home_state.dart';
 import '../bloc/rtmp_live_bloc.dart';
 import '../bloc/rtmp_live_event.dart';
 import '../bloc/rtmp_live_state.dart';
@@ -28,54 +30,66 @@ class RtmpLivePage extends StatefulWidget {
 }
 
 class _RtmpLivePageState extends State<RtmpLivePage> {
-  String? _firstCameraSerial;
-  String _firstCameraName = 'Camera';
-  bool _isLoadingCamera = true;
+  RtmpLiveBloc? _bloc;
+  String? _lastDeviceSn; // tránh tạo lại bloc khi rebuild cùng deviceSn
 
   @override
-  void initState() {
-    super.initState();
-    _loadFirstCamera();
-  }
-
-  // Lấy serial number camera đầu tiên.
-  // Do getCameraDevices trả về list các thiết bị nên ta gọi use case này.
-  Future<void> _loadFirstCamera() async {
-    try {
-      final camerasResult = await sl<GetCameraDevices>()();
-      camerasResult.fold((failure) {}, (devices) {
-        if (devices.isNotEmpty) {
-          _firstCameraSerial = devices.first.id;
-          _firstCameraName = devices.first.name;
-        }
-      });
-    } catch (e) {
-      debugPrint('[RtmpLivePage] Error loading camera: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingCamera = false;
-        });
-      }
-    }
+  void dispose() {
+    _bloc?.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingCamera) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, homeState) {
+        debugPrint('[RtmpLivePage] HomeBloc state: ${homeState.runtimeType}');
 
-    return BlocProvider(
-      create: (context) =>
-          sl<RtmpLiveBloc>()
-            ..add(RtmpLiveStarted(deviceSn: _firstCameraSerial ?? '')),
-      child: _RtmpLiveView(cameraName: _firstCameraName),
+        if (homeState is! HomeLoaded) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0A0A0F),
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+            ),
+          );
+        }
+
+        // Tên field cameras — dùng đúng tên thực tế trong HomeLoaded
+        final cameras = homeState.devices;
+        final camera = cameras.firstWhereOrNull(
+          (c) => c.serialNumber != null && c.serialNumber!.isNotEmpty,
+        );
+
+        if (camera == null) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0A0A0F),
+            body: Center(
+              child: Text(
+                'Không tìm thấy camera hợp lệ.\nVui lòng thêm camera trước.',
+                style: TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final deviceSn = camera.serialNumber!;
+
+        // Chỉ tạo Bloc mới nếu deviceSn thay đổi
+        if (_bloc == null || _lastDeviceSn != deviceSn) {
+          debugPrint(
+            '[RtmpLivePage] Creating new RtmpLiveBloc for deviceSn: $deviceSn',
+          );
+          _bloc?.close(); // đóng bloc cũ nếu có
+          _bloc = sl<RtmpLiveBloc>()..add(RtmpLiveStarted(deviceSn: deviceSn));
+          _lastDeviceSn = deviceSn;
+        }
+
+        return BlocProvider.value(
+          value: _bloc!,
+          child: _RtmpLiveView(cameraName: camera.name),
+        );
+      },
     );
   }
 }

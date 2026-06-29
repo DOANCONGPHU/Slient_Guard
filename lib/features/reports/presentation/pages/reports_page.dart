@@ -11,18 +11,69 @@ import 'package:mobile/features/reports/presentation/widgets/report_metric_grid.
 import 'package:mobile/features/reports/presentation/widgets/report_summary_card.dart';
 import 'package:mobile/features/reports/presentation/widgets/reports_header.dart';
 import 'package:mobile/features/reports/presentation/widgets/weekly_trend_chart_card.dart';
+import 'package:mobile/features/home/presentation/bloc/home_bloc.dart';
+import 'package:mobile/features/home/presentation/bloc/home_state.dart';
+import 'package:mobile/features/session/domain/repositories/session_repository.dart';
+import 'package:mobile/features/reports/presentation/cubit/event_history_state.dart';
 import 'package:mobile/injection_container.dart';
 
 /// Reports tab — top-level composition only.
 /// All API calls and data mapping happen below in cubit / datasource / mapper.
-class ReportsPage extends StatelessWidget {
-  const ReportsPage({super.key});
+class ReportsPage extends StatefulWidget {
+  const ReportsPage({super.key, this.isActive = false});
+
+  final bool isActive;
+
+  @override
+  State<ReportsPage> createState() => _ReportsPageState();
+}
+
+class _ReportsPageState extends State<ReportsPage> {
+  late final EventHistoryCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = sl<EventHistoryCubit>();
+    if (widget.isActive) {
+      _tryLoad();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ReportsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _tryLoad();
+    }
+  }
+
+  void _tryLoad() {
+    final householdId = sl<SessionRepository>().currentHouseholdId;
+    if (householdId != null && householdId.isNotEmpty) {
+      final state = _cubit.state;
+      if (state is EventHistoryInitial ||
+          state is EventHistoryLoading ||
+          state is EventHistoryError) {
+        _cubit.loadInitial();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<EventHistoryCubit>()..loadInitial(),
-      child: const _ReportsPageBody(),
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocListener<HomeBloc, HomeState>(
+        listenWhen: (previous, current) =>
+            current is HomeLoaded && previous is! HomeLoaded,
+        listener: (context, state) {
+          if (widget.isActive) {
+            _tryLoad();
+          }
+        },
+        child: const _ReportsPageBody(),
+      ),
     );
   }
 }

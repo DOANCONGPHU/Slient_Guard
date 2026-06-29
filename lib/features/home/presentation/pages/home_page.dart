@@ -51,7 +51,13 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  static const _tabTitles = ['Nhà của tôi', 'Tự động', 'Live RTMP', 'Báo cáo', 'Tài khoản'];
+  static const _tabTitles = [
+    'Nhà của tôi',
+    'Tự động',
+    'Live RTMP',
+    'Báo cáo',
+    'Tài khoản',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -142,12 +148,12 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     IndexedStack(
                       index: _selectedTab,
-                      children: const [
-                        _HomeTab(),
-                        AutomationPage(),
-                        RtmpLivePage(),
-                        ReportsPage(),
-                        AccountPage(),
+                      children: [
+                        const _HomeTab(),
+                        const AutomationPage(),
+                        const RtmpLivePage(),
+                        ReportsPage(isActive: _selectedTab == 3),
+                        const AccountPage(),
                       ],
                     ),
                     if (uploadInProgress)
@@ -265,49 +271,49 @@ class _LoadedHome extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.pagePadding,
-              6,
-              AppSpacing.pagePadding,
-              120,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pagePadding,
+                6,
+                AppSpacing.pagePadding,
+                120,
+              ),
+              sliver: SliverList.list(
+                children: [
+                  SafetyWeatherCard(
+                    weather: state.weather,
+                    totalCameras: state.devices.length,
+                    onlineCameras: state.devices
+                        .where((d) => d.status.toLowerCase() == 'online')
+                        .length,
+                  ),
+                  const SizedBox(height: 28),
+                  const _DevicesHeader(),
+                  const SizedBox(height: 16),
+                  RoomFilterChips(
+                    selectedRoom: state.selectedRoom,
+                    onSelected: (room) =>
+                        context.read<HomeBloc>().add(RoomFilterChanged(room)),
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: state.devices.isEmpty
+                        ? _EmptyDeviceSection(
+                            key: const ValueKey('empty'),
+                            onAddDevice: () => _handleAddDevicePressed(context),
+                          )
+                        : _InlineDeviceGrid(
+                            key: const ValueKey('grid'),
+                            devices: state.devices,
+                            cameraThumbnails: state.cameraThumbnails,
+                          ),
+                  ),
+                ],
+              ),
             ),
-            sliver: SliverList.list(
-              children: [
-                SafetyWeatherCard(
-                  weather: state.weather,
-                  totalCameras: state.devices.length,
-                  onlineCameras: state.devices
-                      .where((d) => d.status.toLowerCase() == 'online')
-                      .length,
-                ),
-                const SizedBox(height: 28),
-                const _DevicesHeader(),
-                const SizedBox(height: 16),
-                RoomFilterChips(
-                  selectedRoom: state.selectedRoom,
-                  onSelected: (room) =>
-                      context.read<HomeBloc>().add(RoomFilterChanged(room)),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: state.devices.isEmpty
-                      ? _EmptyDeviceSection(
-                          key: const ValueKey('empty'),
-                          onAddDevice: () => _handleAddDevicePressed(context),
-                        )
-                      : _InlineDeviceGrid(
-                          key: const ValueKey('grid'),
-                          devices: state.devices,
-                          cameraThumbnails: state.cameraThumbnails,
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
         ),
       ),
     );

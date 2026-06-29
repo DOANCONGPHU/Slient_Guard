@@ -109,7 +109,18 @@ class FcmService with WidgetsBindingObserver {
   Future<void> registerToken() async {
     try {
       await requestNotificationPermission();
-      final token = await _messaging.getToken().timeout(_messagingTimeout);
+      String? token;
+      try {
+        token = await _messaging.getToken().timeout(const Duration(seconds: 5));
+      } catch (e, st) {
+        developer.log(
+          'FCM getToken() timed out or failed; skipping token registration.',
+          name: 'FcmService',
+          error: e,
+          stackTrace: st,
+        );
+        return;
+      }
       developer.log(
         '[FCM_TOKEN] Current FCM Token: $token',
         name: 'FcmService',
@@ -172,19 +183,26 @@ class FcmService with WidgetsBindingObserver {
       return;
     }
 
-    try {
-      await _apiClient
-          .postObject('/api/users/device-token', {'fcm_token': normalizedToken})
-          .timeout(_backendRegistrationTimeout);
-      developer.log('[FCM] token registered from $source.', name: 'FcmService');
-    } catch (error, stackTrace) {
-      developer.log(
-        'FCM token registration failed from $source.',
-        name: 'FcmService',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
+    Future.microtask(() async {
+      try {
+        await _apiClient
+            .postObject('/api/users/device-token', {
+              'fcm_token': normalizedToken,
+            })
+            .timeout(_backendRegistrationTimeout);
+        developer.log(
+          '[FCM] token registered from $source.',
+          name: 'FcmService',
+        );
+      } catch (error, stackTrace) {
+        developer.log(
+          'FCM token registration failed from $source.',
+          name: 'FcmService',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    });
   }
 
   NotificationAlert _alertFromMessage(RemoteMessage message) {

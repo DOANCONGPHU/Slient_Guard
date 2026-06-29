@@ -208,14 +208,15 @@ Route hiện có:
 
 Lưu ý:
 
-- Không có nested shell route; `HomePage` tự quản lý 4 tab bằng `IndexedStack`
+- Không có nested shell route; `HomePage` tự quản lý 5 tab bằng `IndexedStack`
 
-4 tab trong `HomePage`:
+5 tab trong `HomePage`:
 
 1. Home
 2. Automation
-3. Reports
-4. Account
+3. Live RTMP
+4. Reports
+5. Account
 
 ## 8. Feature map theo code hiện tại
 
@@ -330,7 +331,7 @@ Quản lý lời mời tham gia hộ gia đình:
 
 ### 8.7 `features/account`
 
-Trang account nằm trong tab thứ 4 của `HomePage`.
+Trang account nằm trong tab thứ 5 của `HomePage`.
 
 Hiện có:
 
@@ -373,6 +374,16 @@ Flow tổng quát:
 - onboarding completion được lưu qua `OnboardingService`
 - auth router dùng flag này để quyết định vào `/onboarding` hay `/welcome`
 
+### 8.10 `features/rtmp_live`
+
+Tính năng xem livestream độc lập qua giao thức RTMP:
+
+- Nằm ở tab thứ 3 của `HomePage`.
+- `RtmpLivePage`: Giao diện xem stream. Tách biệt UI (view) và business logic.
+- `RtmpLiveBloc`: Quản lý trạng thái luồng stream (Loading, Loaded, Error) và tự động fetch URL.
+- `RtmpStreamRepository` và UseCase `GetRtmpStreamUrl` dùng để lấy luồng RTMP từ backend.
+- Sử dụng `media_kit` (VideoPlayer) tương tự Imou Cloud nhưng hoạt động độc lập, hỗ trợ overlay controls, chuyển đổi fullscreen ngang, và hiển thị badge (HD/SD/Live).
+
 ## 9. Home tab và camera detail
 
 ### 9.1 Home tab
@@ -382,7 +393,7 @@ Flow tổng quát:
 Nó chứa:
 
 - app bar + unread notification badge
-- 4-tab `IndexedStack`
+- 5-tab `IndexedStack`
 - upload progress line
 - FAB thêm device
 - notification snackbar foreground
@@ -416,7 +427,7 @@ Tối ưu hóa chi tiết camera:
 - Đăng ký Client HTTP chuẩn và đăng ký một `ApiClient` riêng có tên instance là `'imou'` dành riêng cho các API của Imou Cloud.
 - Khởi tạo `SharedPreferences` trước khi gọi đăng ký DI để tránh deadlock, sau đó đăng ký bằng `registerLazySingleton`.
 - Loại bỏ toàn bộ các đăng ký liên quan đến ONVIF và các data source QR/ảnh cũ bị xóa.
-- Đăng ký đầy đủ các Bloc/Cubit: `AuthBloc`, `HomeBloc`, `VideoUploadBloc`, `SuppressCubit`, `DevicePairingBloc` (chỉ phụ thuộc vào `DeviceRepository`), `EmergencyContactsCubit`, `PendingInvitesCubit` (phụ thuộc vào `SessionRepository` để chuyển đổi household), và các Cubit báo cáo/feedback sự kiện.
+- Đăng ký đầy đủ các Bloc/Cubit: `AuthBloc`, `HomeBloc`, `VideoUploadBloc`, `RtmpLiveBloc` (cùng `GetRtmpStreamUrl` và `RtmpStreamRepository`), `SuppressCubit`, `DevicePairingBloc` (chỉ phụ thuộc vào `DeviceRepository`), `EmergencyContactsCubit`, `PendingInvitesCubit` (phụ thuộc vào `SessionRepository` để chuyển đổi household), và các Cubit báo cáo/feedback sự kiện.
 
 ## 11. Backend/API nhìn nhanh
 

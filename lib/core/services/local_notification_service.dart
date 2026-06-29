@@ -41,7 +41,7 @@ class LocalNotificationService {
     tz.initializeTimeZones();
 
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('@drawable/ic_notification'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -190,6 +190,7 @@ class LocalNotificationService {
           priority: Priority.max,
           playSound: true,
           enableVibration: true,
+          icon: 'ic_notification',
         ),
         iOS: DarwinNotificationDetails(),
       ),
@@ -241,6 +242,7 @@ class LocalNotificationService {
           channelDescription: 'Lời mời tham gia hộ gia đình',
           importance: Importance.high,
           priority: Priority.high,
+          icon: 'ic_notification',
         );
       case 'fall_alert':
         return const AndroidNotificationDetails(
@@ -251,6 +253,7 @@ class LocalNotificationService {
           priority: Priority.max,
           playSound: true,
           enableVibration: true,
+          icon: 'ic_notification',
         );
       default:
         return const AndroidNotificationDetails(
@@ -259,6 +262,7 @@ class LocalNotificationService {
           channelDescription: 'Thông báo chung từ SilentGuard',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
+          icon: 'ic_notification',
         );
     }
   }

@@ -386,4 +386,14 @@ class _FakeImouCloudDataSource implements ImouCloudDataSource {
 
   @override
   void clearAccessToken() {}
+
+  @override
+  Future<void> stopDeviceRtmpLive({
+    required String accessToken,
+    required String deviceSn,
+    String channelId = '0',
+  }) {
+    // TODO: implement stopDeviceRtmpLive
+    throw UnimplementedError();
+  }
 }
