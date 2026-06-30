@@ -16,4 +16,4 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 ENV PORT=8080
 EXPOSE 8080
 
-CMD sh -c "sed -i 's/listen 80/listen '\"$PORT\"'/' /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+CMD sh -c "echo 'events {} http { include /etc/nginx/mime.types; server { listen '\"$PORT\"'; root /usr/share/nginx/html; index index.html; location / { try_files \$uri \$uri/ /index.html; } } }' > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
