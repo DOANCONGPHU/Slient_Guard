@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:mobile/core/bootstrap/app_initializer.dart';
@@ -108,9 +109,19 @@ Future<void> _initializeFirebase() async {
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw TimeoutException('Firebase init timed out'),
     );
   }
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  
+  // Defer FCM background handler registration deeply so the native plugin doesn't 
+  // spin up a secondary FlutterEngine concurrently during critical startup.
+  // Delaying by 10 seconds ensures the CPU has completely cooled down, preventing
+  // the aggressive OPPO ANR watchdog from killing the app.
+  Future.delayed(const Duration(seconds: 10), () {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  });
 }
 
 T _logStartupSync<T>(String label, T Function() action) {
@@ -139,7 +150,10 @@ class _BootstrapAppState extends State<BootstrapApp> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_initializePostFrame());
+      // Delay to ensure the first frame is actually presented to the GPU before heavy init blocks the main thread
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) unawaited(_initializePostFrame());
+      });
     });
   }
 
@@ -176,9 +190,22 @@ class _BootstrapAppState extends State<BootstrapApp> {
 
   @override
   Widget build(BuildContext context) {
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      debugPrint('BOOTSTRAP CRASH: ${details.exception}');
+      debugPrint('STACK: ${details.stack}');
+      return const Scaffold(
+        body: Center(child: Text('Bootstrap crashed - check logs')),
+      );
+    };
+
     debugPrint('[STEP] BootstrapApp.build called');
     final appRouter = _appRouter;
-    if (appRouter != null) return MyApp(appRouter: appRouter);
+    if (appRouter != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        debugPrint('[TIMING] Home screen first frame complete');
+      });
+      return MyApp(appRouter: appRouter);
+    }
 
     return _BootstrapShell(error: _initializationError);
   }

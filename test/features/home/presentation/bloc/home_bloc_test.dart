@@ -100,6 +100,8 @@ class _FakeConnectivityService implements ConnectivityService {
   @override
   Stream<void> get onNetworkRestored => const Stream.empty();
   @override
+  Future<void> initialize() async {}
+  @override
   Future<void> dispose() async {}
 }
 

@@ -42,6 +42,7 @@ abstract interface class ImouCloudDataSource {
     required String accessToken,
     required String deviceSn,
     String channelId = '0',
+    int streamId = 2,
   });
 
   Future<void> stopDeviceRtmpLive({
@@ -238,11 +239,12 @@ class ImouCloudDataSourceImpl implements ImouCloudDataSource {
     required String accessToken,
     required String deviceSn,
     String channelId = '0',
+    int streamId = 2,
   }) async {
     final response = await _post(
       '/createDeviceRtmpLive',
       token: accessToken,
-      params: {'deviceId': deviceSn, 'channelId': channelId},
+      params: {'deviceId': deviceSn, 'channelId': channelId, 'streamId': streamId},
     );
     final data = _dataObject(response);
     final rtmpSd = _readString(data, ['rtmp']);

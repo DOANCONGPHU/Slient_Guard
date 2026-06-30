@@ -44,12 +44,14 @@ class BottomNavBar extends StatelessWidget {
                 active: selectedIndex == 1,
                 onTap: () => onSelected(1),
               ),
+              /* Tạm ẩn tab RTMP
               _NavItem(
                 icon: Iconsax.video,
                 label: 'Live RTMP',
                 active: selectedIndex == 2,
                 onTap: () => onSelected(2),
               ),
+              */
               _NavItem(
                 icon: Iconsax.chart,
                 label: 'Báo cáo',

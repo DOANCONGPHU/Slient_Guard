@@ -73,6 +73,9 @@ class CameraVideoPlayer extends StatefulWidget {
 
 class CameraVideoPlayerState extends State<CameraVideoPlayer> {
   final _previewKey = GlobalKey<CameraLivePreviewState>();
+  Player? _player;
+  media_kit_video.VideoController? _videoController;
+  bool _isMuted = false;
 
   void updateUrl(String newUrl) {
     _previewKey.currentState?.updateUrl(newUrl);
@@ -110,6 +113,15 @@ class CameraVideoPlayerState extends State<CameraVideoPlayer> {
                     errorMessage: widget.controller.errorMessage,
                     onRetry: widget.onRetry,
                     onPlaybackError: widget.onPlaybackError,
+                    onPlayerReady: (player, controller) {
+                      if (mounted) {
+                        setState(() {
+                          _player = player;
+                          _videoController = controller;
+                        });
+                        player.setVolume(_isMuted ? 0 : 100);
+                      }
+                    },
                   ),
                   Positioned(
                     top: 10,
@@ -132,42 +144,77 @@ class CameraVideoPlayerState extends State<CameraVideoPlayer> {
                           ],
                         ),
                         const SizedBox(width: 8),
-                        const _RoundOverlayButton(
-                          icon: Icons.volume_up_outlined,
-                          backgroundColor: Colors.white,
-                          iconColor: AppColors.darkText,
+                        GestureDetector(
+                          onTap: () {
+                            if (_player != null) {
+                              setState(() {
+                                _isMuted = !_isMuted;
+                              });
+                              _player!.setVolume(_isMuted ? 0 : 100);
+                            }
+                          },
+                          child: _RoundOverlayButton(
+                            icon: _isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+                            backgroundColor: Colors.white,
+                            iconColor: AppColors.darkText,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     top: 10,
                     right: 10,
                     child: Row(
                       children: [
-                        _OverlayPill(
+                        const _OverlayPill(
                           color: Colors.black54,
                           children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              '1 người',
-                              style: TextStyle(
-                                fontSize: 11,
+                              Icon(
+                                Icons.people_outline,
+                                size: 14,
                                 color: Colors.white,
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(width: 8),
-                        _RoundOverlayButton(
-                          icon: Icons.fullscreen,
-                          backgroundColor: Colors.black54,
-                          iconColor: Colors.white,
+                              SizedBox(width: 5),
+                              Text(
+                                '1 người',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            if (_player != null && _videoController != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => _FullscreenCameraPage(
+                                    player: _player!,
+                                    videoController: _videoController!,
+                                    isMuted: _isMuted,
+                                    onMuteToggle: () {
+                                      setState(() {
+                                        _isMuted = !_isMuted;
+                                      });
+                                      _player!.setVolume(_isMuted ? 0 : 100);
+                                    },
+                                  ),
+                                ),
+                              ).then((_) {
+                                SystemChrome.setPreferredOrientations([
+                                  DeviceOrientation.portraitUp,
+                                ]);
+                              });
+                            }
+                          },
+                          child: const _RoundOverlayButton(
+                            icon: Icons.fullscreen,
+                            backgroundColor: Colors.black54,
+                            iconColor: Colors.white,
+                          ),
                         ),
                       ],
                     ),
@@ -224,6 +271,7 @@ class CameraLivePreview extends StatefulWidget {
     this.errorMessage,
     this.onRetry,
     this.onPlaybackError,
+    this.onPlayerReady,
   });
 
   final String? rtspUrl;
@@ -232,6 +280,7 @@ class CameraLivePreview extends StatefulWidget {
   final String? errorMessage;
   final VoidCallback? onRetry;
   final ValueChanged<String>? onPlaybackError;
+  final void Function(Player, media_kit_video.VideoController)? onPlayerReady;
 
   @override
   State<CameraLivePreview> createState() => CameraLivePreviewState();
@@ -434,6 +483,7 @@ class CameraLivePreviewState extends State<CameraLivePreview> {
         '[VideoPlayer] VideoController created at: ${DateTime.now().toIso8601String()}',
       );
       _listenToPlayerLogs(player);
+      widget.onPlayerReady?.call(player, videoController);
       if (mounted) setState(() {});
     } catch (error, stackTrace) {
       _playerInitialization = null;
@@ -981,6 +1031,141 @@ class _VideoLabel extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: child,
+    );
+  }
+}
+
+class _FullscreenCameraPage extends StatefulWidget {
+  const _FullscreenCameraPage({
+    required this.player,
+    required this.videoController,
+    required this.isMuted,
+    required this.onMuteToggle,
+  });
+
+  final Player player;
+  final media_kit_video.VideoController videoController;
+  final bool isMuted;
+  final VoidCallback onMuteToggle;
+
+  @override
+  State<_FullscreenCameraPage> createState() => _FullscreenCameraPageState();
+}
+
+class _FullscreenCameraPageState extends State<_FullscreenCameraPage> {
+  bool _showControls = false;
+  late bool _isMuted;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMuted = widget.isMuted;
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  void _toggleControls() {
+    setState(() => _showControls = !_showControls);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
+          children: [
+            Center(
+              child: media_kit_video.Video(
+                controller: widget.videoController,
+                controls: media_kit_video.NoVideoControls,
+                fill: Colors.black,
+              ),
+            ),
+            AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const Spacer(),
+                          const _OverlayPill(
+                            color: Colors.white24,
+                            children: [
+                              _StatusDot(),
+                              SizedBox(width: 5),
+                              Text(
+                                'TRỰC TIẾP',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              _isMuted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() => _isMuted = !_isMuted);
+                              widget.onMuteToggle();
+                            },
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

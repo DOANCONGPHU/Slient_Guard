@@ -15,6 +15,20 @@ class _OfflineBannerLayerState extends State<OfflineBannerLayer> {
   Timer? _dismissTimer;
   bool _wasOffline = false;
   bool _showSuccessBanner = false;
+  bool _isGracePeriod = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Grace period on app startup to allow DNS resolution to complete.
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _isGracePeriod = false;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -57,7 +71,7 @@ class _OfflineBannerLayerState extends State<OfflineBannerLayer> {
           BlocBuilder<ConnectivityCubit, ConnectivityState>(
             builder: (context, state) {
               final isOffline = state is ConnectivityOffline;
-              final showBanner = isOffline || _showSuccessBanner;
+              final showBanner = (isOffline && !_isGracePeriod) || _showSuccessBanner;
 
               return Positioned(
                 bottom: 0,
@@ -103,24 +117,26 @@ class _BannerContent extends StatelessWidget {
     final icon = isOffline ? Icons.wifi_off : Icons.wifi;
     final text = isOffline ? 'Không có kết nối mạng' : 'Đã kết nối lại';
 
-    return Container(
-      width: double.infinity,
+    return Material(
       color: bgColor,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

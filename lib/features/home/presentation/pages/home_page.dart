@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:remixicon/remixicon.dart';
 import 'package:mobile/core/utils/app_colors.dart';
 import 'package:mobile/core/theme/app_spacing.dart';
 import 'package:mobile/core/widgets/wave_text_loader.dart';
@@ -123,7 +124,7 @@ class _HomePageState extends State<HomePage> {
               ),
               actions: [
                 _TopBarButton(
-                  icon: Iconsax.cpu,
+                  icon: Remix.openai_fill,
                   tooltip: 'Trợ lý AI',
                   onPressed: () {},
                 ),
@@ -151,7 +152,8 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         const _HomeTab(),
                         const AutomationPage(),
-                        const RtmpLivePage(),
+                        // const RtmpLivePage(),
+                        const SizedBox.shrink(), // Tạm ẩn tab RTMP
                         ReportsPage(isActive: _selectedTab == 3),
                         const AccountPage(),
                       ],

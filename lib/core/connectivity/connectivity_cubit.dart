@@ -20,7 +20,6 @@ class ConnectivityCubit extends Cubit<ConnectivityState>
   ConnectivityCubit(this._connectivityService)
     : super(const ConnectivityOnline()) {
     WidgetsBinding.instance.addObserver(this);
-    _checkInitialState();
     _subscription = _connectivityService.onConnectivityChanged.listen((
       isOnline,
     ) {

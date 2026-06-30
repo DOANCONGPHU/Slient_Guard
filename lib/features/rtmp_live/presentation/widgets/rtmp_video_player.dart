@@ -53,7 +53,9 @@ class _RtmpVideoPlayerState extends State<RtmpVideoPlayer> {
   // Khởi tạo trình phát và lắng nghe lỗi
   void _initializePlayer() {
     final player = Player(
-      configuration: const PlayerConfiguration(bufferSize: 2 * 1024 * 1024),
+      configuration: const PlayerConfiguration(
+        logLevel: MPVLogLevel.debug,
+      ),
     );
     final controller = VideoController(player);
 
@@ -65,6 +67,11 @@ class _RtmpVideoPlayerState extends State<RtmpVideoPlayer> {
     _errorSubscription = player.stream.error.listen((error) {
       debugPrint('[RtmpVideoPlayer] Lỗi playback: $error');
       widget.onPlaybackError(error.toString());
+    });
+
+    // Thêm listener log tạm để xem lỗi nội bộ
+    player.stream.log.listen((event) {
+      debugPrint('[MPV LOG] ${event.prefix}: ${event.text}');
     });
 
     player.setVolume(widget.isMuted ? 0 : 100);

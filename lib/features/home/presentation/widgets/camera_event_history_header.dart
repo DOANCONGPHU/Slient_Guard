@@ -34,7 +34,7 @@ class CameraEventHistoryHeader extends StatelessWidget {
               Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Iconsax.calendar),
+                    icon: const Icon(Iconsax.calendar_search),
                     color: AppColors.mutedText,
                     onPressed: onCalendarTap,
                     constraints: const BoxConstraints(),
@@ -57,13 +57,8 @@ class CameraEventHistoryHeader extends StatelessWidget {
               ),
 
               const Text(
-                'Tất cả sự kiện',
+                'Lọc theo ngày',
                 style: TextStyle(fontSize: 13, color: AppColors.mutedText),
-              ),
-              const Icon(
-                Iconsax.filter,
-                size: 16,
-                color: AppColors.mutedText,
               ),
             ],
           ),

@@ -34,12 +34,11 @@ class LocalNotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+  bool _tzInitialized = false;
 
   Future<NotificationAlert?> initialize({
     required void Function(NotificationAlert alert) onAlertNotificationTap,
   }) async {
-    tz.initializeTimeZones();
-
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@drawable/ic_notification'),
       iOS: DarwinInitializationSettings(
@@ -173,6 +172,11 @@ class LocalNotificationService {
     final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
       1 << 31,
     );
+
+    if (!_tzInitialized) {
+      tz.initializeTimeZones();
+      _tzInitialized = true;
+    }
 
     await _plugin.zonedSchedule(
       id: notificationId,

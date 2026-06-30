@@ -3,9 +3,9 @@ import 'dart:developer' as developer;
 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:mobile/core/router/app_router.dart';
 import 'package:mobile/core/router/auth_notifier.dart';
+import 'package:mobile/core/services/connectivity_service.dart';
 import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/local_notification_service.dart';
 import 'package:mobile/core/services/monitoring_suppress_service.dart';
@@ -34,6 +34,8 @@ class AppInitializer {
   Future<AppInitializationResult> initializeAfterFirstFrame({
     AppRouter? appRouter,
   }) async {
+    final stopwatch = Stopwatch()..start();
+
     await _logStartupAsync(
       'intl.initializeDateFormatting',
       () => initializeDateFormatting('vi', null),
@@ -45,14 +47,15 @@ class AppInitializer {
     if (initializeFirebase != null) {
       await _logStartupAsync(
         'Firebase.initializeApp',
-        () => initializeFirebase().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {
-            debugPrint(
-              '[AppInitializer] Firebase init timeout — continuing anyway',
-            );
-          },
-        ),
+        () async {
+          try {
+            // Firebase plugins require the main isolate and platform channels.
+            // Isolate.run() must NOT be used here — it will deadlock platform channels.
+            await initializeFirebase();
+          } catch (e) {
+            debugPrint('[STARTUP] Firebase init failed: $e — continuing in degraded mode');
+          }
+        },
       );
       debugPrint('[STEP] Firebase.initializeApp done');
       await _yieldToUi();
@@ -71,11 +74,14 @@ class AppInitializer {
     await _yieldToUi();
     debugPrint('[STEP] yield after di.init done');
 
-    await _logStartupAsync('MediaKit.ensureInitialized', () async {
-      await Future<void>(() => MediaKit.ensureInitialized());
-    });
-    debugPrint('[STEP] MediaKit.ensureInitialized done');
-    await _yieldToUi();
+    await _logStartupAsync(
+      'ConnectivityService.initialize',
+      () => di.sl<ConnectivityService>().initialize(),
+    );
+
+    // Wait one full frame before ThemeController so Android's ANR watchdog
+    // receives a heartbeat frame and does not flag the process as frozen.
+    await Future<void>.delayed(const Duration(milliseconds: 16));
 
     await _logStartupAsync(
       'ThemeController.load',
@@ -124,6 +130,19 @@ class AppInitializer {
     debugPrint('[STEP] yield after loadPendingInvites done');
 
     debugPrint('[STEP] returning AppInitializationResult');
+    
+    stopwatch.stop();
+    
+    if (kDebugMode) {
+      const realDeviceBudgetMs = 3000;
+      debugPrint(
+        '[STARTUP] Total initializeAfterFirstFrame: ${stopwatch.elapsedMilliseconds}ms'
+        '${stopwatch.elapsedMilliseconds >= realDeviceBudgetMs ? " ⚠️ EXCEEDS ${realDeviceBudgetMs}ms real device budget" : ""}',
+      );
+      // Do NOT assert here — emulator timing is unreliable and an AssertionError
+      // surfaces as an ANR/crash on Android before error boundaries can catch it.
+    }
+    
     return AppInitializationResult(
       appRouter: resolvedRouter,
       notificationsCubit: notificationsCubit,
@@ -131,7 +150,10 @@ class AppInitializer {
   }
 
   void scheduleMessagingSetup(AppInitializationResult result) {
-    Future.microtask(() async {
+    // Delay FCM setup well past first interactive frame to avoid competing
+    // with the initial render and triggering the Android ANR watchdog.
+    // microtask() runs before the next frame; 500ms ensures the UI is visible.
+    Future<void>.delayed(const Duration(milliseconds: 500)).then((_) async {
       try {
         await _initializeMessagingSetup(result);
       } catch (error, stackTrace) {

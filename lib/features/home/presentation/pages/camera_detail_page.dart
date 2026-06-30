@@ -381,7 +381,7 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                                    d.month == _selectedDate!.month &&
                                    d.day == _selectedDate!.day;
                           }).toList();
-
+                          
                     if (filteredEvents.isEmpty && _selectedDate != null) {
                       return SliverMainAxisGroup(
                         slivers: [
@@ -390,7 +390,7 @@ class _CameraDetailBodyState extends State<_CameraDetailBody> {
                             child: Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                               child: AppEmptyState(
-                                icon: Iconsax.calendar,
+                                icon: Iconsax.calendar_edit,
                                 title: 'Không có sự kiện',
                                 message: 'Không có sự kiện nào vào ngày này',
                                 compact: true,
@@ -767,7 +767,7 @@ class _VideoErrorView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.videocam_off_rounded,
+              Iconsax.video,
               size: 48,
               color: Colors.white54,
             ),
@@ -911,10 +911,10 @@ class _DailySummaryBar extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final selectedDay = DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day);
-
+    
     if (selectedDay == today) return 'Hôm nay';
     if (selectedDay == yesterday) return 'Hôm qua';
-
+    
     String prefix = DateFormat('EEEE, dd/MM', 'vi').format(selectedDate!);
     return prefix.substring(0, 1).toUpperCase() + prefix.substring(1);
   }
