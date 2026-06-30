@@ -11,9 +11,9 @@ RUN flutter build web --release --no-tree-shake-icons
 FROM nginx:alpine
 
 COPY --from=build /app/build/web /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
 
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD sh -c "sed -i 's/listen 80/listen '\"$PORT\"'/' /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
