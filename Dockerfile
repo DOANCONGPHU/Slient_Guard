@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 
 RUN flutter pub get
-RUN flutter build web --release
+RUN flutter build web --release --no-tree-shake-icons
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
