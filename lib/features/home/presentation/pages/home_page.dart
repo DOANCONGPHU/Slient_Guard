@@ -17,7 +17,6 @@ import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
 import 'package:mobile/features/automation/presentation/pages/automation_page.dart';
 import 'package:mobile/features/account/presentation/pages/account_page.dart';
 import 'package:mobile/features/reports/presentation/pages/reports_page.dart';
-import 'package:mobile/features/rtmp_live/presentation/pages/rtmp_live_page.dart';
 import 'package:mobile/features/home/domain/entities/camera_device.dart';
 import 'package:mobile/features/home/presentation/bloc/home_bloc.dart';
 import 'package:mobile/features/home/presentation/bloc/home_event.dart';
