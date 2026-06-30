@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push Demo</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PushDemo">
+  <meta name="theme-color" content="#6366f1">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 22px; color: #1d1d1f; margin-bottom: 4px; }
+    .subtitle { color: #6e6e73; font-size: 14px; margin-bottom: 20px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .status-badge.ok { background: #d1fae5; color: #065f46; }
+    .status-badge.warn { background: #fef3c7; color: #92400e; }
+    .status-badge.err { background: #fee2e2; color: #991b1b; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-ok { background: #10b981; }
+    .dot-warn { background: #f59e0b; }
+    .dot-err { background: #ef4444; }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-bottom: 10px;
+    }
+    button:active { opacity: 0.8; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    input[type="text"], textarea {
+      width: 100%;
+      border: 1.5px solid #e5e5ea;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 15px;
+      margin-bottom: 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus { border-color: #6366f1; }
+    textarea { height: 80px; resize: none; }
+    label { font-size: 13px; color: #6e6e73; margin-bottom: 6px; display: block; }
+    .log {
+      background: #1d1d1f;
+      border-radius: 10px;
+      padding: 14px;
+      font-family: 'SF Mono', monospace;
+      font-size: 12px;
+      color: #a3e635;
+      max-height: 160px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .log .dim { color: #6b7280; }
+    .log .ok { color: #34d399; }
+    .log .err { color: #f87171; }
+    .ios-hint {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.6;
+    }
+    .ios-hint strong { display: block; margin-bottom: 4px; font-size: 14px; }
+    #subscribers-count {
+      font-size: 28px;
+      font-weight: 600;
+      color: #6366f1;
+      margin: 4px 0;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #6e6e73;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- iOS hint (ẩn nếu đã là standalone) -->
+  <div class="card" id="ios-hint-card" style="display:none">
+    <div class="ios-hint">
+      <strong>Trên iPhone: cần thêm vào màn hình chính</strong>
+      Nhấn nút <strong>Chia sẻ</strong> (ô vuông mũi tên lên) → chọn <strong>"Thêm vào màn hình chính"</strong> → mở lại app từ icon vừa tạo → mới nhận được notification.
+    </div>
+  </div>
+
+  <!-- Trạng thái -->
+  <div class="card">
+    <h1>Push Notification Demo</h1>
+    <p class="subtitle">PWA miễn phí — không cần $99 Apple Developer</p>
+    <div id="status-badge" class="status-badge warn">
+      <div class="dot dot-warn"></div>
+      <span id="status-text">Đang kiểm tra...</span>
+    </div>
+    <button class="btn-primary" id="btn-subscribe" disabled>
+      Bật thông báo
+    </button>
+    <button class="btn-danger" id="btn-unsubscribe" disabled style="display:none">
+      Tắt thông báo
+    </button>
+  </div>
+
+  <!-- Gửi notification -->
+  <div class="card">
+    <div class="section-title">Gửi thông báo test</div>
+    <label>Tiêu đề</label>
+    <input type="text" id="notif-title" value="Xin chào!" placeholder="Tiêu đề thông báo">
+    <label>Nội dung</label>
+    <textarea id="notif-body" placeholder="Nội dung thông báo...">Đây là push notification test từ PWA!</textarea>
+    <button class="btn-success" id="btn-send" disabled>
+      Gửi tới tất cả thiết bị
+    </button>
+    <div style="margin-top:8px;font-size:13px;color:#6e6e73">
+      Đang kết nối: <strong><span id="subscribers-count">0</span></strong> thiết bị
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="section-title">Log</div>
+    <div class="log" id="log"><span class="dim">Đang khởi động...</span></div>
+  </div>
+
+<script>
+const log = (msg, type='') => {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = type;
+  const time = new Date().toLocaleTimeString('vi');
+  line.textContent = `[${time}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+};
+
+const setStatus = (text, type) => {
+  const badge = document.getElementById('status-badge');
+  const dot = badge.querySelector('.dot');
+  badge.className = `status-badge ${type}`;
+  dot.className = `dot dot-${type}`;
+  document.getElementById('status-text').textContent = text;
+};
+
+// Kiểm tra iOS standalone mode
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.navigator.standalone === true;
+
+if (isIOS && !isStandalone) {
+  document.getElementById('ios-hint-card').style.display = 'block';
+}
+
+let vapidKey = null;
+let currentSub = null;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function init() {
+  // Lấy VAPID key
+  try {
+    const res = await fetch('/vapidPublicKey');
+    const data = await res.json();
+    vapidKey = data.publicKey;
+    log('Lấy VAPID key thành công', 'ok');
+  } catch(e) {
+    setStatus('Không kết nối được server', 'err');
+    log('Lỗi: ' + e.message, 'err');
+    return;
+  }
+
+  // Cập nhật số subscriber
+  updateSubscriberCount();
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    setStatus('Trình duyệt không hỗ trợ Push', 'err');
+    log('Push API không khả dụng — cần Safari iOS 16.4+ (standalone)', 'err');
+    return;
+  }
+
+  // Đăng ký Service Worker
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    log('Service Worker đã đăng ký', 'ok');
+    await navigator.serviceWorker.ready;
+
+    // Kiểm tra subscription hiện tại
+    currentSub = await reg.pushManager.getSubscription();
+
+    if (currentSub) {
+      setStatus('Đang bật — sẵn sàng nhận thông báo', 'ok');
+      log('Đã có subscription hiện tại', 'ok');
+      showUnsubscribeMode();
+    } else {
+      const perm = Notification.permission;
+      if (perm === 'granted') {
+        setStatus('Chưa subscribe — bấm bật thông báo', 'warn');
+      } else if (perm === 'denied') {
+        setStatus('Đã chặn notification', 'err');
+        log('Notification bị chặn — vào Settings để bật lại', 'err');
+        return;
+      } else {
+        setStatus('Chưa cấp quyền thông báo', 'warn');
+      }
+      document.getElementById('btn-subscribe').disabled = false;
+    }
+  } catch(e) {
+    setStatus('Lỗi Service Worker', 'err');
+    log('SW error: ' + e.message, 'err');
+  }
+}
+
+function showUnsubscribeMode() {
+  document.getElementById('btn-subscribe').style.display = 'none';
+  document.getElementById('btn-unsubscribe').style.display = 'block';
+  document.getElementById('btn-unsubscribe').disabled = false;
+  document.getElementById('btn-send').disabled = false;
+}
+
+function showSubscribeMode() {
+  document.getElementById('btn-subscribe').style.display = 'block';
+  document.getElementById('btn-subscribe').disabled = false;
+  document.getElementById('btn-unsubscribe').style.display = 'none';
+  document.getElementById('btn-send').disabled = true;
+}
+
+async function updateSubscriberCount() {
+  try {
+    const res = await fetch('/status');
+    const data = await res.json();
+    document.getElementById('subscribers-count').textContent = data.subscribers;
+  } catch(e) {}
+}
+
+document.getElementById('btn-subscribe').addEventListener('click', async () => {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      setStatus('Quyền bị từ chối', 'err');
+      log('User từ chối quyền notification', 'err');
+      return;
+    }
+
+    log('Đang đăng ký push subscription...');
+    currentSub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    });
+
+    const res = await fetch('/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentSub)
+    });
+    const data = await res.json();
+
+    setStatus('Đang bật — sẵn sàng nhận thông báo', 'ok');
+    log('Subscribe thành công! ID: ' + data.id, 'ok');
+    showUnsubscribeMode();
+    updateSubscriberCount();
+  } catch(e) {
+    log('Lỗi subscribe: ' + e.message, 'err');
+    setStatus('Lỗi khi bật thông báo', 'err');
+  }
+});
+
+document.getElementById('btn-unsubscribe').addEventListener('click', async () => {
+  if (!currentSub) return;
+  await currentSub.unsubscribe();
+  currentSub = null;
+  setStatus('Đã tắt thông báo', 'warn');
+  log('Đã unsubscribe', 'dim');
+  showSubscribeMode();
+  updateSubscriberCount();
+});
+
+document.getElementById('btn-send').addEventListener('click', async () => {
+  const title = document.getElementById('notif-title').value || 'Thông báo';
+  const body = document.getElementById('notif-body').value || 'Nội dung';
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    });
+    const data = await res.json();
+    log(`Đã gửi tới ${data.sent}/${data.total} thiết bị`, 'ok');
+  } catch(e) {
+    log('Lỗi gửi: ' + e.message, 'err');
+  }
+});
+
+init();
+</script>
+</body>
+</html>
