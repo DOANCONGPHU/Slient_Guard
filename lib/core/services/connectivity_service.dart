@@ -1,12 +1,14 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class ConnectivityService {
   ConnectivityService();
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
+
     int attempts = 0;
     while (attempts < 5) {
       try {
@@ -49,6 +51,7 @@ class ConnectivityService {
   Stream<void> get onNetworkRestored => _onNetworkRestoredController.stream;
 
   Future<bool> get isConnected async {
+    if (kIsWeb) return true;
     if (_lastState != null) return _lastState!;
     final hasConnection = await InternetConnection().hasInternetAccess;
     return hasConnection;

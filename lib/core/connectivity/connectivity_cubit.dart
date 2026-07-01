@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/core/services/connectivity_service.dart';
@@ -20,26 +21,30 @@ class ConnectivityCubit extends Cubit<ConnectivityState>
   ConnectivityCubit(this._connectivityService)
     : super(const ConnectivityOnline()) {
     WidgetsBinding.instance.addObserver(this);
-    _subscription = _connectivityService.onConnectivityChanged.listen((
-      isOnline,
-    ) {
-      if (isOnline) {
-        emit(const ConnectivityOnline());
-      } else {
-        emit(const ConnectivityOffline());
-      }
-    });
+    if (!kIsWeb) {
+      _subscription = _connectivityService.onConnectivityChanged.listen((
+        isOnline,
+      ) {
+        if (isOnline) {
+          emit(const ConnectivityOnline());
+        } else {
+          emit(const ConnectivityOffline());
+        }
+      });
+    }
   }
 
   final ConnectivityService _connectivityService;
   StreamSubscription<bool>? _subscription;
 
   Future<void> _checkInitialState() async {
-    final isOnline = await _connectivityService.isConnected;
-    if (isOnline) {
-      emit(const ConnectivityOnline());
-    } else {
-      emit(const ConnectivityOffline());
+    if (!kIsWeb) {
+      final isOnline = await _connectivityService.isConnected;
+      if (isOnline) {
+        emit(const ConnectivityOnline());
+      } else {
+        emit(const ConnectivityOffline());
+      }
     }
   }
 

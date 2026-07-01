@@ -86,13 +86,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(const HomeLoading());
     }
 
-    final isOnline = await connectivityService.isConnected;
-    if (!isOnline) {
-      _lastStateWasNetworkError = true;
-      emit(const HomeError('Không có kết nối mạng'));
-      return;
-    }
-
     final sessionReady = await _ensureSessionReady(emit);
     if (!sessionReady || generation != _loadGeneration) {
       return;
