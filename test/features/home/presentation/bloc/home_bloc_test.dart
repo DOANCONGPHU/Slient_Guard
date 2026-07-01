@@ -149,6 +149,9 @@ class _FakeSessionRepository implements SessionRepository {
   String? get currentHouseholdId => currentSession?.householdId;
 
   @override
+  Stream<BackendSession?> get sessionChanges => const Stream.empty();
+
+  @override
   Future<Either<SessionFailure, BackendSession>> provisionSession({
     String? inviteCode,
   }) async {
@@ -165,6 +168,13 @@ class _FakeSessionRepository implements SessionRepository {
     String householdId,
   ) async {
     return const Right(null);
+  }
+
+  @override
+  Future<Either<SessionFailure, BackendSession>> updatePhoneNumber(
+    String phone,
+  ) async {
+    return Right(currentSession!);
   }
 
   @override

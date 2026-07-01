@@ -28,6 +28,14 @@ Dưới đây là tổng hợp tất cả các API endpoints được tìm thấ
 - **Body**:
   - `fcm_token`
 
+### **Cập nhật số điện thoại**
+- **Sử dụng tại**: Màn hình Tài khoản (Account Page) / Thông tin cá nhân.
+- **Endpoint**: `PATCH /api/users/me/phone`
+- **Body**:
+  - `phone`
+- **Response Fields**:
+  - Trả về đối tượng `user` chứa số điện thoại đã cập nhật.
+
 ---
 
 ## 2. Quản lý hộ gia đình (Households)
@@ -39,6 +47,12 @@ Dưới đây là tổng hợp tất cả các API endpoints được tìm thấ
   - `household_id`
   - `role`
   - `elderly_name` (tùy chọn)
+
+### **Đổi Hộ gia đình (Switch Household)**
+- **Sử dụng tại**: Lúc người dùng chấp nhận lời mời tham gia nhà mới.
+- **Endpoint**: `POST /api/users/switch-household`
+- **Body**:
+  - `household_id`
 
 ### **Lấy danh sách thành viên trong hộ gia đình**
 - **Sử dụng tại**: Màn hình Quản lý thành viên (Member Management Page).

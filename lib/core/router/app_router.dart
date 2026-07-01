@@ -26,6 +26,8 @@ import 'package:mobile/features/home/presentation/pages/camera_detail_page.dart'
 import 'package:mobile/features/home/presentation/pages/home_page.dart';
 import 'package:mobile/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:mobile/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:mobile/features/phone_verification/presentation/cubit/phone_number_cubit.dart';
+import 'package:mobile/features/phone_verification/presentation/pages/phone_required_page.dart';
 import 'package:mobile/injection_container.dart';
 
 class AppRouter {
@@ -45,9 +47,11 @@ class AppRouter {
       final isReady = authNotifier.isReady;
       final isAuthenticated = authNotifier.isAuthenticated;
       final onboardingCompleted = authNotifier.onboardingCompleted;
+      final requiresPhoneNumber = authNotifier.requiresPhoneNumber;
       final authPhase = authNotifier.phase;
       final onLoading = state.matchedLocation == '/loading';
       final onOnboarding = state.matchedLocation == '/onboarding';
+      final onPhoneRequired = state.matchedLocation == '/phone-required';
       final onAuthFlow =
           state.matchedLocation == '/welcome' ||
           state.matchedLocation == '/signup';
@@ -58,13 +62,19 @@ class AppRouter {
         'phase=$authPhase, isReady=$isReady, '
         'isAuthenticated=$isAuthenticated, '
         'onboardingCompleted=$onboardingCompleted, '
+        'requiresPhoneNumber=$requiresPhoneNumber, '
         'onLoading=$onLoading, onOnboarding=$onOnboarding, '
+        'onPhoneRequired=$onPhoneRequired, '
         'onAuthFlow=$onAuthFlow.',
         name: 'AppRouter',
       );
 
       if (!isReady) return onLoading ? null : '/loading';
       if (isAuthenticated) {
+        if (requiresPhoneNumber) {
+          return onPhoneRequired ? null : '/phone-required';
+        }
+        if (onPhoneRequired) return _postAuthLocation;
         if (onLoading || onOnboarding || onAuthFlow) return _postAuthLocation;
         return null;
       }
@@ -96,6 +106,13 @@ class AppRouter {
         builder: (context, state) => const WelcomePage(),
       ),
       GoRoute(path: '/signup', builder: (context, state) => const SignUpPage()),
+      GoRoute(
+        path: '/phone-required',
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<PhoneNumberCubit>(),
+          child: const PhoneRequiredPage(),
+        ),
+      ),
       GoRoute(
         path: '/home',
         builder: (context, state) => BlocProvider(

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/core/services/local_notification_service.dart';
@@ -30,6 +30,8 @@ class FcmService with WidgetsBindingObserver {
   final LocalNotificationService _localNotificationService;
   final MonitoringSuppressService _monitoringSuppressService;
   final FirebaseMessaging _messaging;
+  static const _webVapidKey =
+      'BGnKNnlcQZLGX74fb9aw99ULP-FHgViXdhM71RYBCqCv5qlNckQogVhR3XDJUpur5WU55IcrvjnXZjqRF2SEMmQ';
   static const _messagingTimeout = Duration(seconds: 5);
   static const _backendRegistrationTimeout = Duration(seconds: 5);
 
@@ -111,7 +113,9 @@ class FcmService with WidgetsBindingObserver {
       await requestNotificationPermission();
       String? token;
       try {
-        token = await _messaging.getToken().timeout(const Duration(seconds: 5));
+        token = await _getTokenForCurrentPlatform().timeout(
+          const Duration(seconds: 5),
+        );
       } catch (e, st) {
         developer.log(
           'FCM getToken() timed out or failed; skipping token registration.',
@@ -137,7 +141,7 @@ class FcmService with WidgetsBindingObserver {
   }
 
   Future<NotificationSettings> requestNotificationPermission() async {
-    if (Platform.isAndroid) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final androidStatus = await Permission.notification.request();
       developer.log(
         'Android notification permission status: $androidStatus.',
@@ -160,6 +164,13 @@ class FcmService with WidgetsBindingObserver {
       name: 'FcmService',
     );
     return settings;
+  }
+
+  Future<String?> _getTokenForCurrentPlatform() {
+    if (kIsWeb) {
+      return _messaging.getToken(vapidKey: _webVapidKey);
+    }
+    return _messaging.getToken();
   }
 
   Future<void> _registerTokenValue(

@@ -440,6 +440,7 @@ Từ code hiện tại có thể thấy app đang gọi nhóm API sau:
 - `GET /api/households/me`
 - `POST /api/users/device-token`
 - `POST /api/users/switch-household` (MỚI)
+- `PATCH /api/users/me/phone` (MỚI)
 
 ### 11.2 Camera/device
 

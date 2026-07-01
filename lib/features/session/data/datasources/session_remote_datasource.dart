@@ -7,6 +7,7 @@ abstract interface class SessionRemoteDataSource {
   Future<Household> getCurrentHousehold();
   Future<void> logout({String? idToken});
   Future<void> switchHousehold(String householdId);
+  Future<String> updatePhoneNumber(String phone);
 }
 
 class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
@@ -56,6 +57,32 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
   }
 
   @override
+  Future<String> updatePhoneNumber(String phone) async {
+    final response = await _apiClient.patchObject('/api/users/me/phone', {
+      'phone': phone,
+    });
+    final user = response['user'];
+    if (user is Map<String, dynamic>) {
+      final updatedPhone = _optionalNullableString(user, 'phone');
+      if (updatedPhone != null) return updatedPhone;
+    }
+    if (user is Map) {
+      final updatedPhone = _optionalNullableString(
+        Map<String, dynamic>.from(user),
+        'phone',
+      );
+      if (updatedPhone != null) return updatedPhone;
+    }
+    final updatedPhone = _optionalNullableString(response, 'phone');
+    if (updatedPhone != null) return updatedPhone;
+
+    throw const ApiException(
+      'Phản hồi cập nhật số điện thoại không hợp lệ.',
+      kind: ApiExceptionKind.invalidResponse,
+    );
+  }
+
+  @override
   Future<void> logout({String? idToken}) async {
     final extraHeaders = idToken != null && idToken.isNotEmpty
         ? {'Authorization': 'Bearer $idToken'}
@@ -83,6 +110,7 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
       fullName: _optionalString(json, 'full_name'),
       email: _requiredString(json, 'email'),
       role: _requiredString(json, 'role'),
+      phone: _optionalNullableString(json, 'phone'),
     );
   }
 
@@ -111,5 +139,11 @@ class SessionRemoteDataSourceImpl implements SessionRemoteDataSource {
 
   String _optionalString(Map<String, dynamic> json, String key) {
     return json[key]?.toString().trim() ?? '';
+  }
+
+  String? _optionalNullableString(Map<String, dynamic> json, String key) {
+    final value = json[key]?.toString().trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 }

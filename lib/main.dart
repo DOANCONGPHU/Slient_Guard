@@ -218,7 +218,7 @@ class _BootstrapShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WatchNest',
+      title: 'SilentGuard',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       locale: const Locale('vi', 'VN'),
@@ -260,7 +260,7 @@ class MyApp extends StatelessWidget {
         animation: themeController,
         builder: (context, _) {
           return MaterialApp.router(
-            title: 'WatchNest',
+            title: 'SilentGuard',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,

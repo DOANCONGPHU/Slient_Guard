@@ -7,6 +7,7 @@ abstract interface class SessionRepository {
   BackendSession? get currentSession;
   Household? get currentHousehold;
   String? get currentHouseholdId;
+  Stream<BackendSession?> get sessionChanges;
 
   Future<Either<SessionFailure, BackendSession>> provisionSession({
     String? inviteCode,
@@ -15,6 +16,10 @@ abstract interface class SessionRepository {
   Future<Either<SessionFailure, void>> logout({String? idToken});
 
   Future<Either<SessionFailure, void>> switchHousehold(String householdId);
+
+  Future<Either<SessionFailure, BackendSession>> updatePhoneNumber(
+    String phone,
+  );
 
   void clearCachedSession();
 }

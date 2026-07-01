@@ -59,6 +59,7 @@ import 'package:mobile/features/home/presentation/cubit/event_feedback_cubit.dar
 import 'package:mobile/features/home/presentation/cubit/suppress_cubit.dart';
 import 'package:mobile/features/notifications/data/datasources/notification_local_data_source.dart';
 import 'package:mobile/features/notifications/presentation/cubit/notifications_cubit.dart';
+import 'package:mobile/features/phone_verification/presentation/cubit/phone_number_cubit.dart';
 import 'package:mobile/features/session/data/datasources/session_remote_datasource.dart';
 import 'package:mobile/features/session/data/repositories/session_repository_impl.dart';
 import 'package:mobile/features/session/domain/repositories/session_repository.dart';
@@ -181,6 +182,7 @@ Future<void> init({SharedPreferences? sharedPreferences}) async {
             VideoUploadBloc(uploadVideoUseCase: sl(), sessionRepository: sl()),
       )
       ..registerFactory(() => SuppressCubit(sl()))
+      ..registerFactory(() => PhoneNumberCubit(sl()))
       ..registerFactory(() => DevicePairingBloc(deviceRepository: sl()));
   });
 

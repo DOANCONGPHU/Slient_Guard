@@ -132,6 +132,28 @@ class ApiClient {
     return response.statusCode;
   }
 
+  Future<Map<String, dynamic>> patchObject(
+    String path, [
+    Map<String, dynamic>? body,
+    Map<String, String>? extraHeaders,
+  ]) async {
+    final response = await _executeWithCatch(
+      () => _client
+          .patch(
+            _uri(path),
+            headers: _headers(extraHeaders),
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(AppConfig.networkTimeout),
+    );
+    final decoded = _decode(response);
+    if (decoded is Map<String, dynamic>) return decoded;
+    throw const ApiException(
+      'Phản hồi máy chủ không hợp lệ.',
+      kind: ApiExceptionKind.invalidResponse,
+    );
+  }
+
   Future<int> delete(String path) async {
     final response = await _executeWithCatch(
       () => _client

@@ -3,14 +3,10 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/monitoring_suppress_service.dart';
-import 'package:mobile/core/services/web_push_service.dart';
 import 'package:mobile/features/auth/domain/entities/app_user.dart';
 import 'package:mobile/features/auth/domain/failures/auth_failure.dart'
     as auth_failures;
@@ -209,15 +205,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _registerFcmTokenSilently() async {
     try {
       await _fcmService.registerToken();
-      if (kIsWeb) {
-        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-        if (idToken != null) {
-          await registerWebPushToken(
-            firebaseIdToken: idToken,
-            backendBaseUrl: AppConfig.apiBaseUrl,
-          );
-        }
-      }
     } catch (error, stackTrace) {
       developer.log(
         'FCM token registration failed after backend provisioning. '

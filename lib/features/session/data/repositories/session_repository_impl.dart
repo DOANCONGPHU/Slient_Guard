@@ -23,6 +23,8 @@ class SessionRepositoryImpl implements SessionRepository {
 
   BackendSession? _cachedSession;
   Future<Either<SessionFailure, BackendSession>>? _provisionInFlight;
+  final _sessionChangesController =
+      StreamController<BackendSession?>.broadcast();
   int _cacheGeneration = 0;
 
   @override
@@ -33,6 +35,10 @@ class SessionRepositoryImpl implements SessionRepository {
 
   @override
   String? get currentHouseholdId => _cachedSession?.householdId;
+
+  @override
+  Stream<BackendSession?> get sessionChanges =>
+      _sessionChangesController.stream;
 
   @override
   Future<Either<SessionFailure, BackendSession>> provisionSession({
@@ -93,10 +99,42 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
+  Future<Either<SessionFailure, BackendSession>> updatePhoneNumber(
+    String phone,
+  ) async {
+    try {
+      final updatedPhone = await _remoteDataSource.updatePhoneNumber(phone);
+      final cached = _cachedSession;
+      if (cached == null) {
+        return provisionSession();
+      }
+
+      final updatedSession = BackendSession(
+        backendUser: cached.backendUser.copyWith(phone: updatedPhone),
+        household: cached.household,
+      );
+      _cacheSession(updatedSession);
+      return Right(updatedSession);
+    } on ApiException catch (error, stackTrace) {
+      _logFailure(error, stackTrace);
+      return Left(_mapApiException(error));
+    } on NoInternetException catch (error, stackTrace) {
+      _logFailure(error, stackTrace);
+      return Left(SessionFailure(error.message));
+    } catch (error, stackTrace) {
+      _logFailure(error, stackTrace);
+      return const Left(
+        SessionFailure('Không thể cập nhật số điện thoại. Vui lòng thử lại.'),
+      );
+    }
+  }
+
+  @override
   void clearCachedSession() {
     _cacheGeneration++;
     _cachedSession = null;
     _provisionInFlight = null;
+    _sessionChangesController.add(null);
   }
 
   Future<Either<SessionFailure, BackendSession>> _provisionSession({
@@ -108,7 +146,7 @@ class SessionRepositoryImpl implements SessionRepository {
         // FIX: retry backend cold-start failures before returning a failure.
         inviteCode: inviteCode,
       ); // FIX: keep the retry policy local to session provisioning.
-      if (generation == _cacheGeneration) _cachedSession = session;
+      if (generation == _cacheGeneration) _cacheSession(session);
       return Right(session);
     } on NoInternetException catch (error, stackTrace) {
       _logFailure(error, stackTrace);
@@ -175,6 +213,11 @@ class SessionRepositoryImpl implements SessionRepository {
       household: household,
     );
     return session; // FIX: return the fully synced backend session only after both calls succeed.
+  }
+
+  void _cacheSession(BackendSession session) {
+    _cachedSession = session;
+    _sessionChangesController.add(session);
   }
 
   bool _isRetryableProvisionError(Object error) {

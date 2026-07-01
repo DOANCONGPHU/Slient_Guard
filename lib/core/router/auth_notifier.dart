@@ -9,6 +9,7 @@ import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/onboarding_service.dart';
 import 'package:mobile/features/auth/domain/entities/app_user.dart';
 import 'package:mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:mobile/features/session/domain/entities/backend_session.dart';
 import 'package:mobile/features/session/domain/repositories/session_repository.dart';
 
 const Duration _kFcmTimeout = Duration(seconds: 5);
@@ -47,6 +48,9 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
         _completeAuthCheck(false);
       },
     );
+    _sessionSubscription = _sessionRepository.sessionChanges.listen(
+      _handleBackendSessionChanged,
+    );
   }
 
   final AuthRepository _authRepository;
@@ -54,6 +58,7 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
   final FcmService _fcmService;
   final OnboardingService _onboardingService;
   late final StreamSubscription<AppUser?> _subscription;
+  late final StreamSubscription<BackendSession?> _sessionSubscription;
   bool _isReady = false;
   bool _isAuthenticated = false;
   bool _onboardingCompleted = false;
@@ -69,6 +74,13 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
   bool get isAuthenticated => _isAuthenticated;
   bool get onboardingCompleted => _onboardingCompleted;
   AuthStartupPhase get phase => _phase;
+  bool get requiresPhoneNumber {
+    if (!_isAuthenticated) return false;
+    final session = _sessionRepository.currentSession;
+    if (session == null) return false;
+    final phone = session.backendUser.phone?.trim() ?? '';
+    return phone.isEmpty;
+  }
 
   Future<void> completeOnboarding() async {
     await _onboardingService.markCompleted();
@@ -147,6 +159,18 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  void _handleBackendSessionChanged(BackendSession? session) {
+    developer.log(
+      '[GoogleAuth] backend session changed: '
+      'sessionPresent=${session != null}, '
+      'phonePresent=${session?.backendUser.phone?.trim().isNotEmpty ?? false}.',
+      name: 'AuthNotifier',
+    );
+    if (_isAuthenticated) {
+      _notifyStatusChanged('backend session changed');
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
@@ -198,6 +222,7 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
     _disposed = true;
     _authRevision++;
     _subscription.cancel();
+    _sessionSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
