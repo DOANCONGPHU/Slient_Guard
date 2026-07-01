@@ -1,8 +1,6 @@
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
-// Điền các thông số Firebase Firebase Config của bạn vào đây (Lấy trong Project Settings > General)
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCfhqgVNzm0p15W31Rb4ZzC_POKN5SxMDc",
   authDomain: "silentguard-8d104.firebaseapp.com",
@@ -17,14 +15,16 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
-// Lắng nghe thông báo khi ứng dụng chạy ngầm (Background)
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Nhận thông báo ngầm: ', payload);
-  
-  const notificationTitle = payload.notification.title;
+  console.log('[firebase-messaging-sw.js] Background message received: ', payload);
+
+  const data = payload.data || {};
+  const notification = payload.notification || {};
+  const notificationTitle = notification.title || data.title || 'SilentGuard';
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/icons/Icon-192.png' // Đường dẫn đến icon của bạn
+    body: notification.body || data.body || '',
+    icon: '/icons/Icon-192.png',
+    data: data
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

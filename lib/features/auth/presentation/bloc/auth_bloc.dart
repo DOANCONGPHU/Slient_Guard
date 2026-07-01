@@ -157,12 +157,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     final result = await _authRepository.signOut();
-    await result.fold((failure) async => emit(AuthFailure(failure.message)), (
-      _,
-    ) async {
+    result.fold(
+      (failure) => developer.log(
+        'Sign-out reported a non-fatal failure.',
+        name: 'AuthBloc',
+        error: failure.message,
+      ),
+      (_) {},
+    );
+
+    try {
       await _monitoringSuppressService.clearAll();
-      emit(const AuthSignedOut());
-    });
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to clear monitoring suppression state during sign-out.',
+        name: 'AuthBloc',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    emit(const AuthSignedOut());
   }
 
   Future<void> _provisionAndEmitSuccess(

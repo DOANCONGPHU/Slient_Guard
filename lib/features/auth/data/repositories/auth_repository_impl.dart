@@ -111,10 +111,38 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<AuthFailure, void>> signOut() async {
+    String? token;
     try {
-      final token = await _dataSource.getIdToken();
-      // Fire and forget backend logout so it doesn't block local sign-out.
-      _sessionRepository.logout(idToken: token).ignore();
+      token = await _dataSource.getIdToken();
+    } catch (error, stackTrace) {
+      developer.log(
+        'Failed to read Firebase ID token before sign-out.',
+        name: 'AuthRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    try {
+      final logoutResult = await _sessionRepository.logout(idToken: token);
+      logoutResult.fold(
+        (failure) => developer.log(
+          'Backend logout failed; continuing local sign-out.',
+          name: 'AuthRepository',
+          error: failure.message,
+        ),
+        (_) {},
+      );
+    } catch (error, stackTrace) {
+      developer.log(
+        'Backend logout threw; continuing local sign-out.',
+        name: 'AuthRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    try {
       await _dataSource.signOut();
       return const Right(null);
     } on FirebaseAuthException catch (error) {
