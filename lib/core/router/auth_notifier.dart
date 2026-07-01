@@ -3,10 +3,14 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/onboarding_service.dart';
+import 'package:mobile/core/services/web_push_service.dart';
 import 'package:mobile/features/auth/domain/entities/app_user.dart';
 import 'package:mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:mobile/features/session/domain/entities/backend_session.dart';
@@ -139,7 +143,27 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _registerFcmAfterFirebaseAuth(int revision) async {
     try {
-      await _fcmService.registerToken().timeout(_kFcmTimeout);
+      if (kIsWeb) {
+        developer.log(
+          '[FCM][Web][Restore] starting web push token registration.',
+          name: 'AuthNotifier',
+        );
+        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+        if (idToken == null || idToken.isEmpty) {
+          developer.log(
+            '[FCM][Web][Restore] skipped web push registration because '
+            'Firebase ID token is missing.',
+            name: 'AuthNotifier',
+          );
+        } else {
+          await registerWebPushToken(
+            firebaseIdToken: idToken,
+            backendBaseUrl: AppConfig.apiBaseUrl,
+          ).timeout(_kFcmTimeout);
+        }
+      } else {
+        await _fcmService.registerToken().timeout(_kFcmTimeout);
+      }
     } on TimeoutException {
       developer.log(
         '[AuthNotifier] FCM token registration timed out.',

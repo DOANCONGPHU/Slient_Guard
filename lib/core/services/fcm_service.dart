@@ -30,8 +30,6 @@ class FcmService with WidgetsBindingObserver {
   final LocalNotificationService _localNotificationService;
   final MonitoringSuppressService _monitoringSuppressService;
   final FirebaseMessaging _messaging;
-  static const _webVapidKey =
-      'BGnKNnlcQZLGX74fb9aw99ULP-FHgViXdhM71RYBCqCv5qlNckQogVhR3XDJUpur5WU55IcrvjnXZjqRF2SEMmQ';
   static const _messagingTimeout = Duration(seconds: 5);
   static const _backendRegistrationTimeout = Duration(seconds: 5);
 
@@ -109,13 +107,24 @@ class FcmService with WidgetsBindingObserver {
   }
 
   Future<void> registerToken() async {
+    if (kIsWeb) {
+      developer.log(
+        '[FCM][Web] native token registration skipped; web push uses '
+        'registerWebPushToken().',
+        name: 'FcmService',
+      );
+      return;
+    }
+
     try {
+      developer.log(
+        '[FCM][${defaultTargetPlatform.name}] token registration started.',
+        name: 'FcmService',
+      );
       await requestNotificationPermission();
       String? token;
       try {
-        token = await _getTokenForCurrentPlatform().timeout(
-          const Duration(seconds: 5),
-        );
+        token = await _messaging.getToken().timeout(const Duration(seconds: 5));
       } catch (e, st) {
         developer.log(
           'FCM getToken() timed out or failed; skipping token registration.',
@@ -126,7 +135,8 @@ class FcmService with WidgetsBindingObserver {
         return;
       }
       developer.log(
-        '[FCM_TOKEN] Current FCM Token: $token',
+        '[FCM][${defaultTargetPlatform.name}] token obtained: '
+        '${_tokenDebugLabel(token)}.',
         name: 'FcmService',
       );
       await _registerTokenValue(token, source: 'current');
@@ -140,8 +150,16 @@ class FcmService with WidgetsBindingObserver {
     }
   }
 
-  Future<NotificationSettings> requestNotificationPermission() async {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  Future<NotificationSettings?> requestNotificationPermission() async {
+    if (kIsWeb) {
+      developer.log(
+        '[FCM][Web] native notification permission request skipped.',
+        name: 'FcmService',
+      );
+      return null;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
       final androidStatus = await Permission.notification.request();
       developer.log(
         'Android notification permission status: $androidStatus.',
@@ -160,17 +178,11 @@ class FcmService with WidgetsBindingObserver {
         )
         .timeout(_messagingTimeout);
     developer.log(
-      '[FCM] permission status: ${settings.authorizationStatus}.',
+      '[FCM][${defaultTargetPlatform.name}] permission status: '
+      '${settings.authorizationStatus}.',
       name: 'FcmService',
     );
     return settings;
-  }
-
-  Future<String?> _getTokenForCurrentPlatform() {
-    if (kIsWeb) {
-      return _messaging.getToken(vapidKey: _webVapidKey);
-    }
-    return _messaging.getToken();
   }
 
   Future<void> _registerTokenValue(
@@ -195,6 +207,12 @@ class FcmService with WidgetsBindingObserver {
     }
 
     Future.microtask(() async {
+      final platformLabel = kIsWeb ? 'Web' : defaultTargetPlatform.name;
+      developer.log(
+        '[FCM][$platformLabel] sending token to backend from $source: '
+        '${_tokenDebugLabel(normalizedToken)}.',
+        name: 'FcmService',
+      );
       try {
         await _apiClient
             .postObject('/api/users/device-token', {
@@ -202,18 +220,27 @@ class FcmService with WidgetsBindingObserver {
             })
             .timeout(_backendRegistrationTimeout);
         developer.log(
-          '[FCM] token registered from $source.',
+          '[FCM][$platformLabel] token sent to backend from $source.',
           name: 'FcmService',
         );
       } catch (error, stackTrace) {
         developer.log(
-          'FCM token registration failed from $source.',
+          '[FCM][$platformLabel] token backend registration failed from '
+          '$source.',
           name: 'FcmService',
           error: error,
           stackTrace: stackTrace,
         );
       }
     });
+  }
+
+  String _tokenDebugLabel(String? token) {
+    final value = token?.trim() ?? '';
+    if (value.isEmpty) return 'empty';
+    if (value.length <= 12) return 'length=${value.length}';
+    return 'length=${value.length}, '
+        'prefix=${value.substring(0, 6)}, suffix=${value.substring(value.length - 6)}';
   }
 
   NotificationAlert _alertFromMessage(RemoteMessage message) {

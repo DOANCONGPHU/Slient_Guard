@@ -3,10 +3,14 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/core/services/fcm_service.dart';
 import 'package:mobile/core/services/monitoring_suppress_service.dart';
+import 'package:mobile/core/services/web_push_service.dart';
 import 'package:mobile/features/auth/domain/entities/app_user.dart';
 import 'package:mobile/features/auth/domain/failures/auth_failure.dart'
     as auth_failures;
@@ -204,6 +208,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _registerFcmTokenSilently() async {
     try {
+      if (kIsWeb) {
+        developer.log(
+          '[FCM][Web] AuthBloc starting web push token registration.',
+          name: 'AuthBloc',
+        );
+        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+        if (idToken == null || idToken.isEmpty) {
+          developer.log(
+            '[FCM][Web] skipped web push registration because Firebase ID '
+            'token is missing.',
+            name: 'AuthBloc',
+          );
+          return;
+        }
+        await registerWebPushToken(
+          firebaseIdToken: idToken,
+          backendBaseUrl: AppConfig.apiBaseUrl,
+        );
+        return;
+      }
+
       await _fcmService.registerToken();
     } catch (error, stackTrace) {
       developer.log(

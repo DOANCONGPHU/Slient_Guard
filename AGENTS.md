@@ -6,3 +6,8 @@
 ## Routes: /welcome → /signup | /signin → /home → /camera/:id
 ## Bottom nav: custom widget in home/presentation/widgets/bottom_nav_bar.dart
 ## Conventions: see ENGINEERING_GUIDELINES.md
+
+Hãy dùng Chrome DevTools MCP mở đúng URL:
+http://localhost:8080/
+
+Nếu đang thấy about:blank thì navigate sang http://localhost:8080/ trước, không debug about:blank.
