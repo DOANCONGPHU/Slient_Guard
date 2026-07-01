@@ -142,28 +142,46 @@ class AuthNotifier extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _registerFcmAfterFirebaseAuth(int revision) async {
-    try {
-      if (kIsWeb) {
+    if (kIsWeb) {
+      developer.log(
+        '[FCM][Web][Restore] starting web push token registration.',
+        name: 'AuthNotifier',
+      );
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken == null || idToken.isEmpty) {
         developer.log(
-          '[FCM][Web][Restore] starting web push token registration.',
+          '[FCM][Web][Restore] skipped web push registration because '
+          'Firebase ID token is missing.',
           name: 'AuthNotifier',
         );
-        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-        if (idToken == null || idToken.isEmpty) {
-          developer.log(
-            '[FCM][Web][Restore] skipped web push registration because '
-            'Firebase ID token is missing.',
-            name: 'AuthNotifier',
-          );
-        } else {
-          await registerWebPushToken(
-            firebaseIdToken: idToken,
-            backendBaseUrl: AppConfig.apiBaseUrl,
-          ).timeout(_kFcmTimeout);
-        }
-      } else {
-        await _fcmService.registerToken().timeout(_kFcmTimeout);
+        return;
       }
+
+      unawaited(
+        registerWebPushToken(
+              firebaseIdToken: idToken,
+              backendBaseUrl: AppConfig.apiBaseUrl,
+            )
+            .then((_) {
+              developer.log(
+                '[FCM][Web][Restore] web push token registration completed.',
+                name: 'AuthNotifier',
+              );
+            })
+            .catchError((Object error, StackTrace stackTrace) {
+              developer.log(
+                '[FCM][Web][Restore] web push token registration failed.',
+                name: 'AuthNotifier',
+                error: error,
+                stackTrace: stackTrace,
+              );
+            }),
+      );
+      return;
+    }
+
+    try {
+      await _fcmService.registerToken().timeout(_kFcmTimeout);
     } on TimeoutException {
       developer.log(
         '[AuthNotifier] FCM token registration timed out.',
